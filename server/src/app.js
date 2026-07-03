@@ -26,7 +26,26 @@ export const app = express();
 // load video/thumbnail media directly via <video>/<img> src URLs — so the
 // default same-origin Cross-Origin-Resource-Policy would silently block
 // every media request in the browser (CORS alone does not cover this).
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+//
+// Helmet's default CSP is also default-src 'self', which blocks the YouTube
+// IFrame embed entirely (its <script src> and the iframe itself) — harmless
+// in local dev since the client runs on Vite's own server there (no CSP
+// applied to that page at all), but it silently breaks YouTube-sourced
+// videos the moment the client is served by this same Express app (e.g. the
+// combined single-service production deployment).
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'frame-src': ["'self'", 'https://www.youtube.com'],
+        'script-src': ["'self'", 'https://www.youtube.com'],
+        'img-src': ["'self'", 'data:', 'https://i.ytimg.com'],
+      },
+    },
+  })
+);
 app.use(
   cors({
     origin: env.clientOrigin,

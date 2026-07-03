@@ -30,6 +30,13 @@ if (env.isProd) {
   app.set('trust proxy', 1);
 }
 
+// When cloud storage is configured, video/thumbnail <img>/<video> src
+// attributes point (via a 302 redirect) at that provider's own domain —
+// derive it from STORAGE_ENDPOINT so the CSP below automatically allows
+// whichever provider is configured (Supabase, R2, etc.) without a code
+// change every time.
+const storageOrigin = env.storage.endpoint ? new URL(env.storage.endpoint).origin : null;
+
 // The client and API are served from different origins (different ports in
 // dev, likely different subdomains in production), and the client needs to
 // load video/thumbnail media directly via <video>/<img> src URLs — so the
@@ -41,7 +48,9 @@ if (env.isProd) {
 // in local dev since the client runs on Vite's own server there (no CSP
 // applied to that page at all), but it silently breaks YouTube-sourced
 // videos the moment the client is served by this same Express app (e.g. the
-// combined single-service production deployment).
+// combined single-service production deployment). Same issue for cloud
+// storage: img-src/media-src must also allow the storage provider's domain,
+// since thumbnails/videos load directly from there, not through this server.
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -50,7 +59,8 @@ app.use(
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
         'frame-src': ["'self'", 'https://www.youtube.com'],
         'script-src': ["'self'", 'https://www.youtube.com'],
-        'img-src': ["'self'", 'data:', 'https://i.ytimg.com'],
+        'img-src': ["'self'", 'data:', 'https://i.ytimg.com', ...(storageOrigin ? [storageOrigin] : [])],
+        'media-src': ["'self'", ...(storageOrigin ? [storageOrigin] : [])],
       },
     },
   })

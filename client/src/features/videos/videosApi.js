@@ -18,7 +18,7 @@ export async function fetchVideos(page = 1, { category, minDuration, maxDuration
 
 export async function fetchVideo(id) {
   const { data } = await axiosClient.get(`/videos/${id}`);
-  return data.video;
+  return { ...data.video, subscriberCount: data.subscriberCount, isSubscribed: data.isSubscribed };
 }
 
 export async function searchVideos(q, { category, minDuration, maxDuration, tags, collectionId } = {}) {

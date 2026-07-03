@@ -83,7 +83,7 @@ router.post(
 );
 router.post('/bulk', protect, validate(bulkActionSchema), videoController.bulkAction);
 
-router.get('/:id', validate(videoIdSchema), videoController.getVideo);
+router.get('/:id', optionalAuth, validate(videoIdSchema), videoController.getVideo);
 router.get('/:id/stream', validate(videoIdSchema), videoController.streamVideo);
 router.get('/:id/thumbnail', validate(videoIdSchema), videoController.getThumbnail);
 router.post('/:id/view', optionalAuth, validate(videoIdSchema), videoController.incrementView);

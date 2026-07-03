@@ -4,6 +4,7 @@ import { Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import { Collection } from '../models/Collection.js';
 import { Note } from '../models/Note.js';
+import { Subscription } from '../models/Subscription.js';
 import { Video } from '../models/Video.js';
 import { ViewEvent } from '../models/ViewEvent.js';
 import { WatchHistory } from '../models/WatchHistory.js';
@@ -164,7 +165,13 @@ export const getVideo = asyncHandler(async (req, res) => {
     'username avatarUrl'
   );
   if (!video) throw new ApiError(404, 'Video not found');
-  res.json({ video });
+
+  const subscriberCount = await Subscription.countDocuments({ channel: video.uploader._id });
+  const isSubscribed = req.userId
+    ? Boolean(await Subscription.exists({ subscriber: req.userId, channel: video.uploader._id }))
+    : false;
+
+  res.json({ video, subscriberCount, isSubscribed });
 });
 
 export const incrementView = asyncHandler(async (req, res) => {

@@ -9,6 +9,7 @@ import { parseChapters } from '../../lib/parseChapters';
 import VideoAnalyticsPanel from '../analytics/VideoAnalyticsPanel';
 import CommentList from '../comments/CommentList';
 import { fetchCollection } from '../collections/collectionsApi';
+import { subscribe, unsubscribe } from '../channel/subscriptionsApi';
 import NotesPanel from './NotesPanel';
 import PlaylistPanel from './PlaylistPanel';
 import VideoEditPanel from './VideoEditPanel';
@@ -33,6 +34,8 @@ export default function WatchPage() {
   const [likesCount, setLikesCount] = useState(0);
   const [playlist, setPlaylist] = useState(null);
   const [resolution, setResolution] = useState('auto');
+  const [subBusy, setSubBusy] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const videoRef = useRef(null);
   const youtubeRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -109,6 +112,25 @@ export default function WatchPage() {
     }, 5000);
     return () => clearInterval(timer);
   }, [video?.transcodeStatus, videoId]);
+
+  async function handleToggleSubscribe() {
+    if (!user) return navigate('/login');
+    setSubBusy(true);
+    try {
+      if (video.isSubscribed) {
+        await unsubscribe(video.uploader._id);
+      } else {
+        await subscribe(video.uploader._id);
+      }
+      setVideo((prev) => ({
+        ...prev,
+        isSubscribed: !prev.isSubscribed,
+        subscriberCount: prev.subscriberCount + (prev.isSubscribed ? -1 : 1),
+      }));
+    } finally {
+      setSubBusy(false);
+    }
+  }
 
   async function handleLike() {
     if (!user) return navigate('/login');
@@ -271,9 +293,20 @@ export default function WatchPage() {
           <span className={styles.uploaderName}>{video.uploader?.username}</span>
           <span className={styles.stats}>
             {formatViews(video.views)} · {timeAgo(video.createdAt)}
+            {typeof video.subscriberCount === 'number' &&
+              ` · ${video.subscriberCount} subscriber${video.subscriberCount === 1 ? '' : 's'}`}
           </span>
         </div>
         <div className={styles.actions}>
+          {!isOwner && (
+            <button
+              className={video.isSubscribed ? styles.subscribedButton : styles.subscribeButton}
+              onClick={handleToggleSubscribe}
+              disabled={subBusy}
+            >
+              {video.isSubscribed ? 'Subscribed' : 'Subscribe'}
+            </button>
+          )}
           <button className={liked ? styles.likedButton : styles.likeButton} onClick={handleLike}>
             👍 {likesCount}
           </button>
@@ -285,7 +318,22 @@ export default function WatchPage() {
         </div>
       </div>
 
-      {video.description && <p className={styles.description}>{video.description}</p>}
+      {video.description && (
+        <div className={styles.descriptionBlock}>
+          <p className={descExpanded ? styles.description : `${styles.description} ${styles.descriptionClamped}`}>
+            {video.description}
+          </p>
+          {(video.description.length > 180 || video.description.split('\n').length > 3) && (
+            <button
+              type="button"
+              className={styles.readMoreButton}
+              onClick={() => setDescExpanded((v) => !v)}
+            >
+              {descExpanded ? 'Show less' : 'Read more'}
+            </button>
+          )}
+        </div>
+      )}
 
       {video.tags?.length > 0 && (
         <div className={styles.tagRow}>

@@ -47,13 +47,17 @@ export const env = {
     pass: process.env.SMTP_PASS || null,
     from: process.env.SMTP_FROM || process.env.SMTP_USER || null,
   },
-  // Optional Cloudflare R2 (S3-compatible) config. When unset, uploads stay
-  // on local disk exactly as before — nothing about local storage changes.
-  r2: {
-    accountId: process.env.R2_ACCOUNT_ID || null,
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || null,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || null,
-    bucket: process.env.R2_BUCKET_NAME || null,
+  // Optional S3-compatible cloud storage config — works with Supabase
+  // Storage, Cloudflare R2, Backblaze B2, MinIO, etc. When unset, uploads
+  // stay on local disk exactly as before — nothing about local storage
+  // changes. Needed on hosts like Render's free tier where local disk is
+  // wiped on every redeploy.
+  storage: {
+    endpoint: process.env.STORAGE_ENDPOINT || null,
+    region: process.env.STORAGE_REGION || 'us-east-1',
+    accessKeyId: process.env.STORAGE_ACCESS_KEY_ID || null,
+    secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY || null,
+    bucket: process.env.STORAGE_BUCKET_NAME || null,
   },
   // Optional — override only if ffmpeg/ffprobe aren't on PATH.
   ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',

@@ -11,32 +11,42 @@ import { env } from '../config/env.js';
 let client = null;
 
 export function isCloudStorageConfigured() {
-  return Boolean(env.r2.accountId && env.r2.accessKeyId && env.r2.secretAccessKey && env.r2.bucket);
+  return Boolean(
+    env.storage.endpoint && env.storage.accessKeyId && env.storage.secretAccessKey && env.storage.bucket
+  );
 }
 
+// Works with any S3-compatible provider (Cloudflare R2, Supabase Storage,
+// Backblaze B2, MinIO, ...) — just point STORAGE_ENDPOINT/STORAGE_REGION at
+// whichever one you're using.
 function getClient() {
   if (!client) {
     client = new S3Client({
-      region: 'auto',
-      endpoint: `https://${env.r2.accountId}.r2.cloudflarestorage.com`,
+      region: env.storage.region,
+      endpoint: env.storage.endpoint,
+      // Supabase (and some other S3-compatible providers) require
+      // path-style requests (endpoint/bucket/key) rather than the
+      // AWS-style virtual-hosted (bucket.endpoint/key) — safe to leave on
+      // for R2 too.
+      forcePathStyle: true,
       credentials: {
-        accessKeyId: env.r2.accessKeyId,
-        secretAccessKey: env.r2.secretAccessKey,
+        accessKeyId: env.storage.accessKeyId,
+        secretAccessKey: env.storage.secretAccessKey,
       },
     });
   }
   return client;
 }
 
-// Uploads a local file to R2 under `key` (we reuse our own randomized
-// filenames as keys, so no separate naming scheme is needed) and deletes the
-// local copy afterward — cloud storage is meant to replace local disk for
-// these files, not duplicate them.
+// Uploads a local file to cloud storage under `key` (we reuse our own
+// randomized filenames as keys, so no separate naming scheme is needed) and
+// deletes the local copy afterward — cloud storage is meant to replace
+// local disk for these files, not duplicate them.
 export async function uploadFileToCloud(localPath, key, contentType) {
   const body = fs.createReadStream(localPath);
   await getClient().send(
     new PutObjectCommand({
-      Bucket: env.r2.bucket,
+      Bucket: env.storage.bucket,
       Key: key,
       Body: body,
       ContentType: contentType,
@@ -47,15 +57,15 @@ export async function uploadFileToCloud(localPath, key, contentType) {
 
 export async function deleteFileFromCloud(key) {
   await getClient()
-    .send(new DeleteObjectCommand({ Bucket: env.r2.bucket, Key: key }))
+    .send(new DeleteObjectCommand({ Bucket: env.storage.bucket, Key: key }))
     .catch(() => {});
 }
 
-// Short-lived signed URL so the browser can fetch/stream the object directly
-// from R2 (which has no egress fees) instead of proxying bytes through our
-// own server.
+// Short-lived signed URL so the browser can fetch/stream the object
+// directly from cloud storage instead of proxying bytes through our own
+// server.
 export async function getSignedFileUrl(key, expiresInSeconds = 3600) {
-  return getSignedUrl(getClient(), new GetObjectCommand({ Bucket: env.r2.bucket, Key: key }), {
+  return getSignedUrl(getClient(), new GetObjectCommand({ Bucket: env.storage.bucket, Key: key }), {
     expiresIn: expiresInSeconds,
   });
 }

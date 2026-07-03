@@ -2,20 +2,28 @@ services:
   - type: web
     name: streambeat
     runtime: node
-    plan: starter
+    plan: free
     region: oregon
-    buildCommand: cd client && npm ci && npm run build && cd ../server && npm ci
+    buildCommand: cd client && npm ci --include=dev && npm run build && cd ../server && npm ci
     startCommand: cd server && npm start
     healthCheckPath: /api/health
-    disk:
-      name: streambeat-storage
-      mountPath: /data
-      sizeGB: 5
     envVars:
       - key: NODE_ENV
         value: production
-      - key: STORAGE_DIR
-        value: /data
+      # Video/thumbnail files go to this S3-compatible bucket instead of
+      # local disk — required on the free plan since it has no persistent
+      # disk (local files are wiped on every redeploy). Works with Supabase
+      # Storage, Cloudflare R2, Backblaze B2, etc.
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_REGION
+        value: us-east-1
+      - key: STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: STORAGE_BUCKET_NAME
+        sync: false
       # Set this manually after the first deploy, once Render assigns your
       # URL — e.g. https://streambeat.onrender.com (no trailing slash).
       # Client and API share one origin here, so this only matters as a

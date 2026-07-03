@@ -24,7 +24,7 @@ export const env = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
   jwtAccessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
   jwtRefreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
-  isProd: (process.env.NODE_ENV || 'development') === 'production',
+  isProd: (process.env.NODE_ENV || 'development').toLowerCase() === 'production',
   // Optional, comma-separated DNS servers (e.g. "8.8.8.8,1.1.1.1"). Some
   // networks/OS resolver configs cause Node's DNS client to fail SRV lookups
   // for mongodb+srv:// URIs even though the OS resolver works fine — set

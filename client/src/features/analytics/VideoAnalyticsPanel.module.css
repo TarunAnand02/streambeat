@@ -1,0 +1,31 @@
+.toggleButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.panel {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  margin-bottom: 16px;
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.stats {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}

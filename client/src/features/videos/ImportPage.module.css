@@ -1,0 +1,73 @@
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tabActive {
+  background: var(--color-text);
+  color: #000;
+  border-color: var(--color-text);
+}
+
+.fetchForm {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.fetchForm input {
+  flex: 1;
+}
+
+.fetchButton {
+  padding: 0 20px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.fetchButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.previewCard {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.previewThumb {
+  width: 120px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.previewMeta {
+  min-width: 0;
+}
+
+.previewChannel {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}

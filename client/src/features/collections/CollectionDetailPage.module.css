@@ -1,0 +1,155 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.name {
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nameInput {
+  font-size: 24px;
+  font-weight: 700;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  padding: 4px 8px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.roleBadge {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-raised);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  text-transform: capitalize;
+}
+
+.deleteButton {
+  border: 1px solid var(--color-danger);
+  background: none;
+  color: var(--color-danger);
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.empty {
+  color: var(--color-text-muted);
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.collabPanel {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  margin-bottom: 24px;
+}
+
+.collabHeading {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.collabList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  margin: 0 0 14px;
+}
+
+.collabItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+}
+
+.collabName {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.collabRole {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+  margin-left: auto;
+}
+
+.collabRemove {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+}
+
+.collabRemove:hover {
+  color: var(--color-danger);
+}
+
+.collabForm {
+  display: flex;
+  gap: 8px;
+}
+
+.collabInput {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.collabInput:first-child {
+  flex: 1;
+}
+
+.collabAddButton {
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.collabAddButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px 16px;
+}

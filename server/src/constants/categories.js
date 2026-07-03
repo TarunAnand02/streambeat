@@ -1,0 +1,28 @@
+// Keep this id list in sync with client/src/features/videos/categories.js
+// (the client owns display labels/colors; the server only needs valid ids).
+export const CATEGORY_IDS = [
+  'music',
+  'gaming',
+  'sports',
+  'news',
+  'education',
+  'entertainment',
+  'comedy',
+  'movies',
+  'technology',
+  'science',
+  'cooking',
+  'travel',
+  'fashion',
+  'fitness',
+  'diy',
+  'art',
+  'documentary',
+  'business',
+  'kids',
+  'vlogs',
+  'podcasts',
+  'automotive',
+  'nature',
+  'other',
+];

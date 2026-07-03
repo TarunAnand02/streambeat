@@ -1,0 +1,51 @@
+.chapters {
+  margin-bottom: 24px;
+}
+
+.heading {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  margin: 0;
+}
+
+.chapterButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.chapterButton:hover {
+  background: var(--color-surface-raised);
+}
+
+.chapterTime {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  min-width: 44px;
+}
+
+.chapterLabel {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: streambeat
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: cd client && npm ci && npm run build && cd ../server && npm ci
+    startCommand: cd server && npm start
+    healthCheckPath: /api/health
+    disk:
+      name: streambeat-storage
+      mountPath: /data
+      sizeGB: 5
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STORAGE_DIR
+        value: /data
+      # Set this manually after the first deploy, once Render assigns your
+      # URL — e.g. https://streambeat.onrender.com (no trailing slash).
+      # Client and API share one origin here, so this only matters as a
+      # defense-in-depth check, not for actual same-origin requests to work.
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: VITE_API_URL
+        value: /api
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES
+        value: 7d
+      # Optional — only needed for "Import from YouTube". Leave unset otherwise.
+      - key: YOUTUBE_API_KEY
+        sync: false
+      # Optional — only needed for real password-reset emails. Without these,
+      # forgot-password still works but only logs the reset link server-side.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false

@@ -50,7 +50,36 @@ export const getCollection = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .populate('uploader', 'username avatarUrl');
 
+  const orderIndex = new Map(collection.videoOrder.map((id, i) => [id.toString(), i]));
+  videos.sort((a, b) => {
+    const ai = orderIndex.has(a._id.toString()) ? orderIndex.get(a._id.toString()) : Infinity;
+    const bi = orderIndex.has(b._id.toString()) ? orderIndex.get(b._id.toString()) : Infinity;
+    return ai - bi;
+  });
+
   res.json({ collection, videos, role });
+});
+
+export const reorderCollection = asyncHandler(async (req, res) => {
+  const collection = await Collection.findById(req.params.id);
+  if (!collection) throw new ApiError(404, 'Collection not found');
+  const role = roleFor(collection, req.userId);
+  if (role !== 'owner' && role !== 'editor') {
+    throw new ApiError(403, 'You do not have edit access to this collection');
+  }
+
+  const memberCount = await Video.countDocuments({
+    _id: { $in: req.body.videoIds },
+    collections: collection._id,
+  });
+  if (memberCount !== req.body.videoIds.length) {
+    throw new ApiError(400, 'One or more videos are not in this collection');
+  }
+
+  collection.videoOrder = req.body.videoIds;
+  await collection.save();
+
+  res.json({ videoOrder: collection.videoOrder });
 });
 
 export const updateCollection = asyncHandler(async (req, res) => {

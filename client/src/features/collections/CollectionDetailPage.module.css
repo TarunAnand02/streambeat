@@ -49,6 +49,18 @@
   flex-shrink: 0;
 }
 
+.playAllButton {
+  border: none;
+  background: var(--color-accent);
+  color: #000;
+  border-radius: var(--radius-full);
+  padding: 8px 18px;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
 .empty {
   color: var(--color-text-muted);
 }
@@ -152,4 +164,31 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 20px 16px;
+}
+
+.gridItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reorderRow {
+  display: flex;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.reorderButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+
+.reorderButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }

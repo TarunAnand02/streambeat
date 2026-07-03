@@ -18,6 +18,27 @@
   margin-bottom: 16px;
 }
 
+.resolutionRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.resolutionSelect {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.transcodeStatus {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 .video {
   position: absolute;
   inset: 0;

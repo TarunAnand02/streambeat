@@ -40,6 +40,11 @@ export async function suggestVideos(q) {
   return data.videos;
 }
 
+export async function fetchRecommended() {
+  const { data } = await axiosClient.get('/videos/recommended');
+  return data.videos;
+}
+
 export async function uploadVideo(
   { title, description, category, durationSeconds, videoFile, thumbnailFile },
   onUploadProgress,
@@ -125,8 +130,10 @@ export async function importFromUrl({ url, title, description, category }) {
   return data.video;
 }
 
-export function streamUrl(id) {
-  return `${baseURL}/videos/${id}/stream`;
+export function streamUrl(id, resolution) {
+  return resolution
+    ? `${baseURL}/videos/${id}/stream?resolution=${resolution}`
+    : `${baseURL}/videos/${id}/stream`;
 }
 
 export function thumbnailUrl(id) {

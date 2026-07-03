@@ -10,9 +10,11 @@ import RegisterPage from './features/auth/RegisterPage';
 import ResetPasswordPage from './features/auth/ResetPasswordPage';
 import AnalyticsPage from './features/analytics/AnalyticsPage';
 import ChannelPage from './features/channel/ChannelPage';
+import SubscriptionsPage from './features/channel/SubscriptionsPage';
 import CollectionDetailPage from './features/collections/CollectionDetailPage';
 import CollectionsPage from './features/collections/CollectionsPage';
 import HelpPage from './features/help/HelpPage';
+import HistoryPage from './features/history/HistoryPage';
 import HomePage from './features/videos/HomePage';
 import ImportPage from './features/videos/ImportPage';
 import SearchResultsPage from './features/videos/SearchResultsPage';
@@ -46,6 +48,8 @@ export default function App() {
           <Route path="/collections" element={<CollectionsPage />} />
           <Route path="/collections/:id" element={<CollectionDetailPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/subscriptions" element={<SubscriptionsPage />} />
         </Route>
       </Route>
     </Routes>

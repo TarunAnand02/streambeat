@@ -47,4 +47,15 @@ export const env = {
     pass: process.env.SMTP_PASS || null,
     from: process.env.SMTP_FROM || process.env.SMTP_USER || null,
   },
+  // Optional Cloudflare R2 (S3-compatible) config. When unset, uploads stay
+  // on local disk exactly as before — nothing about local storage changes.
+  r2: {
+    accountId: process.env.R2_ACCOUNT_ID || null,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || null,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || null,
+    bucket: process.env.R2_BUCKET_NAME || null,
+  },
+  // Optional — override only if ffmpeg/ffprobe aren't on PATH.
+  ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
+  ffprobePath: process.env.FFPROBE_PATH || 'ffprobe',
 };

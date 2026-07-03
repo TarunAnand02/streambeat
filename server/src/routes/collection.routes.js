@@ -7,6 +7,7 @@ import {
   collaboratorIdSchema,
   collectionIdSchema,
   createCollectionSchema,
+  reorderCollectionSchema,
   updateCollectionSchema,
 } from '../validators/collection.schema.js';
 
@@ -18,6 +19,11 @@ router.post('/', validate(createCollectionSchema), collectionController.createCo
 router.get('/', collectionController.listCollections);
 router.get('/:id', validate(collectionIdSchema), collectionController.getCollection);
 router.patch('/:id', validate(updateCollectionSchema), collectionController.updateCollection);
+router.patch(
+  '/:id/order',
+  validate(reorderCollectionSchema),
+  collectionController.reorderCollection
+);
 router.delete('/:id', validate(collectionIdSchema), collectionController.deleteCollection);
 router.post(
   '/:id/collaborators',

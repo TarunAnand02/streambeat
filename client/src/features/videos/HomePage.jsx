@@ -5,7 +5,7 @@ import DurationFilter, { DURATION_BUCKETS } from '../../components/DurationFilte
 import VideoCardSkeleton from '../../components/VideoCardSkeleton';
 import VideoRow from '../../components/VideoRow';
 import { getCategory } from './categories';
-import { fetchVideos } from './videosApi';
+import { fetchRecommended, fetchVideos } from './videosApi';
 import styles from './HomePage.module.css';
 
 export default function HomePage() {
@@ -13,6 +13,13 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('all');
   const [durationBucket, setDurationBucket] = useState(null);
+  const [recommended, setRecommended] = useState([]);
+
+  useEffect(() => {
+    fetchRecommended()
+      .then(setRecommended)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +66,9 @@ export default function HomePage() {
         </div>
       ) : (
         <div>
+          {category === 'all' && !durationBucket && recommended.length > 0 && (
+            <VideoRow title="Recommended for you" videos={recommended} />
+          )}
           <VideoRow
             title={category === 'all' ? 'Recently uploaded' : `Recently uploaded in ${getCategory(category)?.label}`}
             videos={videos}

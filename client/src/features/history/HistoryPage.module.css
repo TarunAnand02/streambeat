@@ -1,0 +1,47 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.clearButton {
+  border: 1px solid var(--color-danger);
+  background: none;
+  color: var(--color-danger);
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.empty {
+  color: var(--color-text-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px 16px;
+}
+
+.gridItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.removeButton {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.removeButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-text);
+}

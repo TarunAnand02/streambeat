@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Chapters from '../../components/Chapters';
 import Spinner from '../../components/ui/Spinner';
 import YoutubeEmbed from '../../components/YoutubeEmbed';
@@ -8,7 +8,9 @@ import { formatViews, timeAgo } from '../../lib/formatDuration';
 import { parseChapters } from '../../lib/parseChapters';
 import VideoAnalyticsPanel from '../analytics/VideoAnalyticsPanel';
 import CommentList from '../comments/CommentList';
+import { fetchCollection } from '../collections/collectionsApi';
 import NotesPanel from './NotesPanel';
+import PlaylistPanel from './PlaylistPanel';
 import VideoEditPanel from './VideoEditPanel';
 import {
   deleteVideo,
@@ -22,16 +24,64 @@ import styles from './WatchPage.module.css';
 export default function WatchPage() {
   const { videoId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, initialized } = useAuth();
+  const [searchParams] = useSearchParams();
+  const playlistId = searchParams.get('playlist');
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [playlist, setPlaylist] = useState(null);
+  const [resolution, setResolution] = useState('auto');
   const videoRef = useRef(null);
   const youtubeRef = useRef(null);
   const wrapperRef = useRef(null);
+  const resumeTimeRef = useRef(0);
 
   useEffect(() => {
+    setResolution('auto');
+  }, [videoId]);
+
+  function handleResolutionChange(newRes) {
+    resumeTimeRef.current = videoRef.current?.currentTime || 0;
+    setResolution(newRes);
+  }
+
+  useEffect(() => {
+    if (!playlistId) {
+      setPlaylist(null);
+      return;
+    }
+    let cancelled = false;
+    fetchCollection(playlistId).then((data) => {
+      if (!cancelled) setPlaylist(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [playlistId]);
+
+  const playlistIndex = playlist ? playlist.videos.findIndex((v) => v._id === videoId) : -1;
+  const nextInPlaylist = playlist && playlistIndex >= 0 ? playlist.videos[playlistIndex + 1] : null;
+  const prevInPlaylist = playlist && playlistIndex > 0 ? playlist.videos[playlistIndex - 1] : null;
+
+  const goToPlaylistVideo = useCallback(
+    (targetVideo) => {
+      if (!targetVideo) return;
+      navigate(`/watch/${targetVideo._id}?playlist=${playlistId}`);
+    },
+    [navigate, playlistId]
+  );
+
+  const handleEnded = useCallback(() => {
+    if (nextInPlaylist) goToPlaylistVideo(nextInPlaylist);
+  }, [nextInPlaylist, goToPlaylistVideo]);
+
+  useEffect(() => {
+    // Wait for session restore first — firing before the access token is
+    // back in Redux would record the view as anonymous (no watch history
+    // entry) and compute like-status as logged-out even for a real session.
+    if (!initialized) return;
     let cancelled = false;
     setLoading(true);
     fetchVideo(videoId).then((data) => {
@@ -46,7 +96,19 @@ export default function WatchPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoId]);
+  }, [videoId, initialized]);
+
+  // While a background transcode is running, poll for its variants to show
+  // up without requiring a manual refresh — stops once it leaves 'processing'.
+  useEffect(() => {
+    if (video?.transcodeStatus !== 'processing') return;
+    const timer = setInterval(() => {
+      fetchVideo(videoId).then((data) => {
+        setVideo((prev) => (prev && prev._id === data._id ? { ...prev, variants: data.variants, transcodeStatus: data.transcodeStatus } : prev));
+      });
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [video?.transcodeStatus, videoId]);
 
   async function handleLike() {
     if (!user) return navigate('/login');
@@ -139,21 +201,67 @@ export default function WatchPage() {
     <div className={styles.page}>
       {video.source === 'youtube' ? (
         <div className={styles.embedWrapper} ref={wrapperRef}>
-          <YoutubeEmbed ref={youtubeRef} videoId={video.youtubeVideoId} title={video.title} />
+          <YoutubeEmbed
+            ref={youtubeRef}
+            videoId={video.youtubeVideoId}
+            title={video.title}
+            onEnded={handleEnded}
+          />
         </div>
       ) : (
         <div className={styles.embedWrapper} ref={wrapperRef}>
-          {/* key forces a fresh <video> per video id, so switching between
-              two uploads via client-side nav doesn't reuse a stale element */}
+          {/* key forces a fresh <video> per video id + resolution, so
+              switching either never reuses a stale element */}
           <video
-            key={video._id}
+            key={`${video._id}-${resolution}`}
             ref={videoRef}
             className={styles.video}
-            src={streamUrl(video._id)}
+            src={streamUrl(video._id, resolution === 'auto' ? undefined : resolution)}
             controls
             autoPlay
+            onEnded={handleEnded}
+            onLoadedMetadata={() => {
+              if (resumeTimeRef.current) {
+                videoRef.current.currentTime = resumeTimeRef.current;
+                resumeTimeRef.current = 0;
+              }
+            }}
           />
         </div>
+      )}
+
+      {video.source === 'upload' && (video.variants?.length > 0 || video.transcodeStatus === 'processing') && (
+        <div className={styles.resolutionRow}>
+          {video.variants?.length > 0 && (
+            <select
+              className={styles.resolutionSelect}
+              value={resolution}
+              onChange={(e) => handleResolutionChange(e.target.value)}
+            >
+              <option value="auto">Auto (Source)</option>
+              {video.variants.map((v) => (
+                <option key={v.resolution} value={v.resolution}>
+                  {v.resolution}
+                </option>
+              ))}
+            </select>
+          )}
+          {video.transcodeStatus === 'processing' && (
+            <span className={styles.transcodeStatus}>Processing other qualities…</span>
+          )}
+        </div>
+      )}
+
+      {playlist && (
+        <PlaylistPanel
+          playlist={playlist}
+          currentVideoId={videoId}
+          playlistId={playlistId}
+          onPrev={() => goToPlaylistVideo(prevInPlaylist)}
+          onNext={() => goToPlaylistVideo(nextInPlaylist)}
+          hasPrev={Boolean(prevInPlaylist)}
+          hasNext={Boolean(nextInPlaylist)}
+        />
       )}
 
       <h1 className={styles.title}>{video.title}</h1>

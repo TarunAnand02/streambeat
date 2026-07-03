@@ -72,9 +72,3 @@ Client starts on `http://localhost:5173`.
 - Uploaded files are renamed to random UUIDs on disk and validated against a MIME + extension whitelist — the original filename and user input never influence a filesystem path.
 - Rate limiting is applied to auth and upload endpoints; Helmet security headers and a locked-down CORS origin are applied globally.
 - Set `NODE_ENV=production` before any real deployment — this suppresses stack traces from API error responses. Also put the app behind HTTPS in production (not required for local dev).
-
-## Future work (out of scope for this MVP)
-
-- Playlists, subscriptions, watch history, recommendations
-- Cloud video storage (S3/R2) and transcoding to multiple resolutions
-- Admin-editable Help articles (currently static content in `client/src/features/help/helpData.js`)

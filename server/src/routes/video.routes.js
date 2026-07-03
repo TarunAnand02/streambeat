@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as videoController from '../controllers/video.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { optionalAuth, protect } from '../middleware/auth.middleware.js';
 import {
   suggestLimiter,
   uploadLimiter,
@@ -36,6 +36,7 @@ router.get(
   validate(suggestSchema),
   videoController.suggestVideos
 );
+router.get('/recommended', optionalAuth, videoController.getRecommended);
 router.get(
   '/youtube-preview',
   protect,
@@ -85,7 +86,7 @@ router.post('/bulk', protect, validate(bulkActionSchema), videoController.bulkAc
 router.get('/:id', validate(videoIdSchema), videoController.getVideo);
 router.get('/:id/stream', validate(videoIdSchema), videoController.streamVideo);
 router.get('/:id/thumbnail', validate(videoIdSchema), videoController.getThumbnail);
-router.post('/:id/view', validate(videoIdSchema), videoController.incrementView);
+router.post('/:id/view', optionalAuth, validate(videoIdSchema), videoController.incrementView);
 router.post('/:id/like', protect, validate(videoIdSchema), videoController.toggleLike);
 router.post('/:id/notes', protect, validate(createNoteSchema), videoController.createNote);
 router.get('/:id/notes', protect, validate(videoIdSchema), videoController.listNotes);

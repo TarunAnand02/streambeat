@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import VideoCard from '../../components/VideoCard';
 import VideoCardSkeleton from '../../components/VideoCardSkeleton';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchCollections } from '../collections/collectionsApi';
 import { bulkVideoAction, deleteVideo } from '../videos/videosApi';
 import { fetchChannel } from './channelApi';
+import { subscribe, unsubscribe } from './subscriptionsApi';
 import styles from './ChannelPage.module.css';
 
 export default function ChannelPage() {
   const { userId } = useParams();
-  const { user } = useAuth();
+  const { user, isAuthenticated, initialized } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
@@ -18,8 +20,13 @@ export default function ChannelPage() {
   const [collections, setCollections] = useState([]);
   const [addToCollectionId, setAddToCollectionId] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [subBusy, setSubBusy] = useState(false);
 
   useEffect(() => {
+    // Wait for session restore to resolve first — on a fresh page load,
+    // fetching before the access token is back in Redux would otherwise
+    // silently request this as an anonymous viewer (wrong isSubscribed).
+    if (!initialized) return;
     let cancelled = false;
     setLoading(true);
     fetchChannel(userId).then((result) => {
@@ -31,7 +38,7 @@ export default function ChannelPage() {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, initialized]);
 
   const isOwner = user?.id === userId;
 
@@ -40,6 +47,25 @@ export default function ChannelPage() {
       fetchCollections().then(setCollections);
     }
   }, [selectMode, isOwner, collections.length]);
+
+  async function handleToggleSubscribe() {
+    if (!isAuthenticated) return navigate('/login');
+    setSubBusy(true);
+    try {
+      if (data.isSubscribed) {
+        await unsubscribe(userId);
+      } else {
+        await subscribe(userId);
+      }
+      setData((prev) => ({
+        ...prev,
+        isSubscribed: !prev.isSubscribed,
+        subscriberCount: prev.subscriberCount + (prev.isSubscribed ? -1 : 1),
+      }));
+    } finally {
+      setSubBusy(false);
+    }
+  }
 
   async function handleDelete(videoId) {
     if (!window.confirm('Delete this video? This cannot be undone.')) return;
@@ -119,9 +145,21 @@ export default function ChannelPage() {
         <div className={styles.avatar}>{data.user.username.charAt(0).toUpperCase()}</div>
         <div className={styles.headerInfo}>
           <h1 className={styles.username}>{data.user.username}</h1>
+          <p className={styles.subscriberCount}>
+            {data.subscriberCount} subscriber{data.subscriberCount === 1 ? '' : 's'}
+          </p>
           {data.user.bio && <p className={styles.bio}>{data.user.bio}</p>}
           {isOwner && <p className={styles.accountEmail}>{user.email}</p>}
         </div>
+        {!isOwner && (
+          <button
+            className={data.isSubscribed ? styles.subscribedButton : styles.subscribeButton}
+            onClick={handleToggleSubscribe}
+            disabled={subBusy}
+          >
+            {data.isSubscribed ? 'Subscribed' : 'Subscribe'}
+          </button>
+        )}
         {isOwner && data.videos.length > 0 && (
           <button
             className={styles.selectToggle}

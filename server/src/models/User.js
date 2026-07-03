@@ -39,6 +39,10 @@ const userSchema = new Schema(
       type: Number,
       default: 0,
     },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
     // Only the SHA-256 hash of the reset token is stored — the raw token is
     // emailed to the user and never persisted, so a DB read alone can't be
     // used to reset the account (same principle as passwordHash).

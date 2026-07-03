@@ -42,3 +42,13 @@ export const collaboratorIdSchema = z.object({
   query: z.any(),
   params: z.object({ id: objectId, userId: userIdParam }),
 });
+
+const videoId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid video id');
+
+export const reorderCollectionSchema = z.object({
+  body: z.object({
+    videoIds: z.array(videoId).min(1).max(500),
+  }),
+  query: z.any(),
+  params: z.object({ id: objectId }),
+});

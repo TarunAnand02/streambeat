@@ -28,6 +28,7 @@ function toPublicUser(user) {
     email: user.email,
     avatarUrl: user.avatarUrl,
     bio: user.bio,
+    isAdmin: user.isAdmin,
   };
 }
 

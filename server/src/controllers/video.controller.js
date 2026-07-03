@@ -6,6 +6,7 @@ import { Collection } from '../models/Collection.js';
 import { Note } from '../models/Note.js';
 import { Video } from '../models/Video.js';
 import { ViewEvent } from '../models/ViewEvent.js';
+import { WatchHistory } from '../models/WatchHistory.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
@@ -14,6 +15,13 @@ import {
   assertThumbnailSize,
 } from '../middleware/upload.middleware.js';
 import { randomFilenameFor } from '../utils/filename.js';
+import {
+  deleteFileFromCloud,
+  getSignedFileUrl,
+  isCloudStorageConfigured,
+  uploadFileToCloud,
+} from '../utils/storage.js';
+import { transcodeVideo } from '../utils/transcode.js';
 import {
   MAX_URL_IMPORT_BYTES,
   fetchAndValidateVideoResponse,
@@ -26,6 +34,15 @@ import {
   fetchYoutubeMetadata,
   resolveChannel,
 } from '../utils/youtube.js';
+
+// Uploads a just-saved local video/thumbnail file to cloud storage when
+// configured, returning the storage provider to record on the Video doc.
+// No-op (stays local) when cloud storage isn't configured.
+async function persistUploadedFile(localPath, filename, mimeType) {
+  if (!isCloudStorageConfigured()) return 'local';
+  await uploadFileToCloud(localPath, filename, mimeType);
+  return 'r2';
+}
 
 export const createVideo = asyncHandler(async (req, res) => {
   const videoFile = req.files?.video?.[0];
@@ -40,6 +57,11 @@ export const createVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Thumbnail exceeds the 5MB size limit');
   }
 
+  const storageProvider = await persistUploadedFile(videoFile.path, videoFile.filename, videoFile.mimetype);
+  if (thumbnailFile) {
+    await persistUploadedFile(thumbnailFile.path, thumbnailFile.filename, thumbnailFile.mimetype);
+  }
+
   const video = await Video.create({
     title: req.body.title,
     description: req.body.description || '',
@@ -51,9 +73,11 @@ export const createVideo = asyncHandler(async (req, res) => {
     mimeType: videoFile.mimetype,
     sizeBytes: videoFile.size,
     uploader: req.userId,
+    storageProvider,
   });
 
   res.status(201).json({ video });
+  transcodeVideo(video._id).catch(() => {});
 });
 
 export const importFromUrl = asyncHandler(async (req, res) => {
@@ -87,6 +111,8 @@ export const importFromUrl = asyncHandler(async (req, res) => {
     throw err instanceof ApiError ? err : new ApiError(502, 'Failed to download that file');
   }
 
+  const storageProvider = await persistUploadedFile(filePath, filename, contentType);
+
   const video = await Video.create({
     title: req.body.title,
     description: req.body.description || '',
@@ -96,9 +122,11 @@ export const importFromUrl = asyncHandler(async (req, res) => {
     mimeType: contentType,
     sizeBytes: bytesWritten,
     uploader: req.userId,
+    storageProvider,
   });
 
   res.status(201).json({ video });
+  transcodeVideo(video._id).catch(() => {});
 });
 
 // Shared by listVideos and searchVideos so "narrow by category/tags/duration/
@@ -147,6 +175,15 @@ export const incrementView = asyncHandler(async (req, res) => {
   );
   if (!video) throw new ApiError(404, 'Video not found');
   ViewEvent.create({ video: video._id }).catch(() => {});
+
+  if (req.userId) {
+    WatchHistory.findOneAndUpdate(
+      { user: req.userId, video: video._id },
+      { watchedAt: new Date() },
+      { upsert: true }
+    ).catch(() => {});
+  }
+
   res.json({ views: video.views });
 });
 
@@ -157,9 +194,28 @@ export const streamVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'This video is hosted on YouTube, not streamed locally');
   }
 
+  // Resolve which file to serve: either the original or a ready transcoded
+  // variant, each of which independently tracks its own storage provider.
+  let filename = video.filename;
+  let storageProvider = video.storageProvider;
+  let mimeType = video.mimeType;
+  if (req.query.resolution) {
+    const variant = video.variants.find((v) => v.resolution === req.query.resolution);
+    if (variant) {
+      filename = variant.filename;
+      storageProvider = variant.storageProvider;
+      mimeType = 'video/mp4'; // transcoded variants are always mp4
+    }
+  }
+
+  if (storageProvider === 'r2') {
+    const url = await getSignedFileUrl(filename);
+    return res.redirect(302, url);
+  }
+
   // filename comes from the DB record, never from req.params, so this can
   // never be path-traversed regardless of what :id the client sends.
-  const filePath = path.join(VIDEO_STORAGE_DIR, video.filename);
+  const filePath = path.join(VIDEO_STORAGE_DIR, filename);
   if (!fs.existsSync(filePath)) {
     throw new ApiError(404, 'Video file missing on disk');
   }
@@ -170,7 +226,7 @@ export const streamVideo = asyncHandler(async (req, res) => {
   if (!range) {
     res.writeHead(200, {
       'Content-Length': stat.size,
-      'Content-Type': video.mimeType,
+      'Content-Type': mimeType,
       'Accept-Ranges': 'bytes',
     });
     fs.createReadStream(filePath).pipe(res);
@@ -191,7 +247,7 @@ export const streamVideo = asyncHandler(async (req, res) => {
     'Content-Range': `bytes ${start}-${end}/${stat.size}`,
     'Accept-Ranges': 'bytes',
     'Content-Length': end - start + 1,
-    'Content-Type': video.mimeType,
+    'Content-Type': mimeType,
   });
   fs.createReadStream(filePath, { start, end }).pipe(res);
 });
@@ -201,6 +257,12 @@ export const getThumbnail = asyncHandler(async (req, res) => {
   if (!video || !video.thumbnailFilename) {
     throw new ApiError(404, 'Thumbnail not found');
   }
+
+  if (video.storageProvider === 'r2') {
+    const url = await getSignedFileUrl(video.thumbnailFilename);
+    return res.redirect(302, url);
+  }
+
   const filePath = path.join(THUMBNAIL_STORAGE_DIR, video.thumbnailFilename);
   if (!fs.existsSync(filePath)) {
     throw new ApiError(404, 'Thumbnail file missing on disk');
@@ -241,6 +303,34 @@ export const updateVideo = asyncHandler(async (req, res) => {
   res.json({ video });
 });
 
+// Removes the original file, thumbnail, and any transcoded variants for an
+// 'upload'-sourced video, from whichever storage each one actually lives in.
+function deleteVideoFiles(video) {
+  if (video.source !== 'upload') return;
+
+  if (video.storageProvider === 'r2') {
+    deleteFileFromCloud(video.filename);
+  } else {
+    fs.unlink(path.join(VIDEO_STORAGE_DIR, video.filename), () => {});
+  }
+
+  if (video.thumbnailFilename) {
+    if (video.storageProvider === 'r2') {
+      deleteFileFromCloud(video.thumbnailFilename);
+    } else {
+      fs.unlink(path.join(THUMBNAIL_STORAGE_DIR, video.thumbnailFilename), () => {});
+    }
+  }
+
+  for (const variant of video.variants || []) {
+    if (variant.storageProvider === 'r2') {
+      deleteFileFromCloud(variant.filename);
+    } else {
+      fs.unlink(path.join(VIDEO_STORAGE_DIR, variant.filename), () => {});
+    }
+  }
+}
+
 export const deleteVideo = asyncHandler(async (req, res) => {
   const video = await Video.findById(req.params.id);
   if (!video) throw new ApiError(404, 'Video not found');
@@ -248,16 +338,11 @@ export const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'You do not own this video');
   }
 
-  if (video.source === 'upload') {
-    const videoPath = path.join(VIDEO_STORAGE_DIR, video.filename);
-    fs.unlink(videoPath, () => {});
-    if (video.thumbnailFilename) {
-      fs.unlink(path.join(THUMBNAIL_STORAGE_DIR, video.thumbnailFilename), () => {});
-    }
-  }
+  deleteVideoFiles(video);
 
   await Note.deleteMany({ video: video._id });
   await ViewEvent.deleteMany({ video: video._id });
+  await WatchHistory.deleteMany({ video: video._id });
   await video.deleteOne();
   res.status(204).send();
 });
@@ -276,15 +361,11 @@ export const bulkAction = asyncHandler(async (req, res) => {
 
   if (action === 'delete') {
     for (const video of videos) {
-      if (video.source === 'upload') {
-        fs.unlink(path.join(VIDEO_STORAGE_DIR, video.filename), () => {});
-        if (video.thumbnailFilename) {
-          fs.unlink(path.join(THUMBNAIL_STORAGE_DIR, video.thumbnailFilename), () => {});
-        }
-      }
+      deleteVideoFiles(video);
     }
     await Note.deleteMany({ video: { $in: videoIds } });
     await ViewEvent.deleteMany({ video: { $in: videoIds } });
+    await WatchHistory.deleteMany({ video: { $in: videoIds } });
     await Video.deleteMany({ _id: { $in: videoIds } });
     return res.json({ action, count: videoIds.length });
   }
@@ -392,6 +473,68 @@ export const suggestVideos = asyncHandler(async (req, res) => {
     .limit(6);
 
   res.json({ videos });
+});
+
+const RECOMMENDATION_LIMIT = 20;
+const RECOMMENDATION_CANDIDATE_POOL = 300;
+
+// Heuristic recommendations (no ML/paid API): score candidate videos by how
+// much their category/tags overlap with what the viewer has watched
+// recently, break ties by view count. Falls back to overall trending videos
+// for logged-out viewers or anyone without enough history yet.
+export const getRecommended = asyncHandler(async (req, res) => {
+  if (!req.userId) {
+    const trending = await Video.find()
+      .sort({ views: -1 })
+      .limit(RECOMMENDATION_LIMIT)
+      .populate('uploader', 'username avatarUrl');
+    return res.json({ videos: trending });
+  }
+
+  const history = await WatchHistory.find({ user: req.userId })
+    .sort({ watchedAt: -1 })
+    .limit(50)
+    .populate('video', 'category tags');
+
+  const watchedIds = history.map((h) => h.video?._id).filter(Boolean);
+
+  if (watchedIds.length === 0) {
+    const trending = await Video.find({ uploader: { $ne: req.userId } })
+      .sort({ views: -1 })
+      .limit(RECOMMENDATION_LIMIT)
+      .populate('uploader', 'username avatarUrl');
+    return res.json({ videos: trending });
+  }
+
+  const categoryCounts = new Map();
+  const tagCounts = new Map();
+  for (const { video } of history) {
+    if (!video) continue;
+    categoryCounts.set(video.category, (categoryCounts.get(video.category) || 0) + 1);
+    for (const tag of video.tags || []) {
+      tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+    }
+  }
+
+  const candidates = await Video.find({
+    _id: { $nin: watchedIds },
+    uploader: { $ne: req.userId },
+  })
+    .sort({ createdAt: -1 })
+    .limit(RECOMMENDATION_CANDIDATE_POOL)
+    .populate('uploader', 'username avatarUrl');
+
+  const scored = candidates.map((video) => {
+    let score = categoryCounts.get(video.category) || 0;
+    for (const tag of video.tags || []) {
+      score += (tagCounts.get(tag) || 0) * 0.5;
+    }
+    return { video, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score || b.video.views - a.video.views);
+
+  res.json({ videos: scored.slice(0, RECOMMENDATION_LIMIT).map((s) => s.video) });
 });
 
 export const previewYoutube = asyncHandler(async (req, res) => {

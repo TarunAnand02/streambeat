@@ -76,3 +76,72 @@
   color: var(--color-text-muted);
   line-height: 1.5;
 }
+
+.adminActions {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: 12px;
+}
+
+.adminButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.adminButton:hover {
+  color: var(--color-text);
+}
+
+.editInput,
+.editTextarea {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: 13px;
+  font-family: inherit;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+}
+
+.saveButton {
+  border: none;
+  background: var(--color-accent);
+  color: #000;
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+}
+
+.cancelButton {
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.addForm {
+  padding: 14px 0 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: 10px;
+}

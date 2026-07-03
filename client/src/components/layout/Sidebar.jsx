@@ -4,6 +4,7 @@ import styles from './Sidebar.module.css';
 
 const navItems = [
   { to: '/', label: 'Home', icon: '🏠' },
+  { to: '/subscriptions', label: 'Subscriptions', icon: '🔔', protected: true },
   { to: '/upload', label: 'Upload', icon: '⬆️', protected: true },
   { to: '/import', label: 'Import', icon: '📥', protected: true },
 ];
@@ -62,6 +63,15 @@ export default function Sidebar() {
             >
               <span className={styles.icon}>📊</span>
               Analytics
+            </NavLink>
+            <NavLink
+              to="/history"
+              className={({ isActive }) =>
+                isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+              }
+            >
+              <span className={styles.icon}>🕒</span>
+              History
             </NavLink>
           </>
         ) : (

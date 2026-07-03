@@ -1,3 +1,4 @@
+import { Subscription } from '../models/Subscription.js';
 import { User } from '../models/User.js';
 import { Video } from '../models/Video.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -13,6 +14,7 @@ export const getMe = asyncHandler(async (req, res) => {
       email: user.email,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      isAdmin: user.isAdmin,
     },
   });
 });
@@ -22,6 +24,10 @@ export const getChannel = asyncHandler(async (req, res) => {
   if (!user) throw new ApiError(404, 'User not found');
 
   const videos = await Video.find({ uploader: user._id }).sort({ createdAt: -1 });
+  const subscriberCount = await Subscription.countDocuments({ channel: user._id });
+  const isSubscribed = req.userId
+    ? Boolean(await Subscription.exists({ subscriber: req.userId, channel: user._id }))
+    : false;
 
   res.json({
     user: {
@@ -31,6 +37,8 @@ export const getChannel = asyncHandler(async (req, res) => {
       bio: user.bio,
     },
     videos,
+    subscriberCount,
+    isSubscribed,
   });
 });
 
@@ -49,6 +57,7 @@ export const updateMe = asyncHandler(async (req, res) => {
       email: user.email,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      isAdmin: user.isAdmin,
     },
   });
 });

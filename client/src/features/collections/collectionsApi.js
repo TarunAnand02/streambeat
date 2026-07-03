@@ -32,3 +32,8 @@ export async function addCollaborator(id, { username, role }) {
 export async function removeCollaborator(id, userId) {
   await axiosClient.delete(`/collections/${id}/collaborators/${userId}`);
 }
+
+export async function reorderCollection(id, videoIds) {
+  const { data } = await axiosClient.patch(`/collections/${id}/order`, { videoIds });
+  return data.videoOrder;
+}

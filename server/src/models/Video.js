@@ -66,6 +66,31 @@ const videoSchema = new Schema(
       type: Number,
       default: null,
     },
+    // Where `filename`/`thumbnailFilename` actually live — 'local' resolves
+    // via VIDEO_STORAGE_DIR as before; 'r2' resolves via a signed URL. Lets
+    // cloud storage be introduced without touching already-uploaded videos.
+    storageProvider: {
+      type: String,
+      enum: ['local', 'r2'],
+      default: 'local',
+    },
+    transcodeStatus: {
+      type: String,
+      enum: ['none', 'processing', 'ready', 'failed'],
+      default: 'none',
+    },
+    // Multi-resolution variants produced by the transcoding pipeline, in
+    // addition to the original `filename` (always kept as the source/"Auto"
+    // quality).
+    variants: [
+      {
+        _id: false,
+        resolution: { type: String, required: true }, // e.g. "480p"
+        filename: { type: String, required: true },
+        storageProvider: { type: String, enum: ['local', 'r2'], default: 'local' },
+        sizeBytes: { type: Number, default: 0 },
+      },
+    ],
     uploader: {
       type: Schema.Types.ObjectId,
       ref: 'User',

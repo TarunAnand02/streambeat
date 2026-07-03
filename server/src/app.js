@@ -11,6 +11,9 @@ import analyticsRoutes from './routes/analytics.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import collectionRoutes from './routes/collection.routes.js';
 import commentRoutes from './routes/comment.routes.js';
+import helpRoutes from './routes/help.routes.js';
+import historyRoutes from './routes/history.routes.js';
+import subscriptionRoutes from './routes/subscription.routes.js';
 import userRoutes from './routes/user.routes.js';
 import videoRoutes from './routes/video.routes.js';
 
@@ -41,6 +44,9 @@ app.use('/api/videos', videoRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/collections', collectionRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/help', helpRoutes);
 
 // Combined single-service deployment: if a client build sits alongside the
 // server (see server/README-deploy or the root render.yaml), serve it

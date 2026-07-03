@@ -29,6 +29,12 @@ const collectionSchema = new Schema(
         role: { type: String, enum: ['viewer', 'editor'], required: true },
       },
     ],
+    // Manual play-order hint for "play as playlist" — filtered against live
+    // membership (Video.collections) at read time, so it never needs to be
+    // kept in sync on every add/remove; entries for videos no longer in the
+    // collection are just ignored, and new members without a saved position
+    // render after the ordered ones.
+    videoOrder: [{ type: Schema.Types.ObjectId, ref: 'Video' }],
   },
   { timestamps: true }
 );

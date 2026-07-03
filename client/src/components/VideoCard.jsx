@@ -5,20 +5,21 @@ import { getCategory } from '../features/videos/categories';
 import { streamUrl, thumbnailUrl } from '../features/videos/videosApi';
 import styles from './VideoCard.module.css';
 
-export default function VideoCard({ video, style, selectable, selected, onToggleSelect }) {
+export default function VideoCard({ video, style, selectable, selected, onToggleSelect, playlistId }) {
   const navigate = useNavigate();
   const { previewing, onMouseEnter, onMouseLeave } = useHoverPreview();
   const category = getCategory(video.category);
   const isYoutube = video.source === 'youtube';
+  const watchPath = playlistId ? `/watch/${video._id}?playlist=${playlistId}` : `/watch/${video._id}`;
 
   function handlePlay(e) {
     e.stopPropagation();
-    navigate(`/watch/${video._id}`);
+    navigate(watchPath);
   }
 
   function handleCardClick() {
     if (selectable) onToggleSelect(video._id);
-    else navigate(`/watch/${video._id}`);
+    else navigate(watchPath);
   }
 
   return (

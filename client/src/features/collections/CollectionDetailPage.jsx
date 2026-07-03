@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import Spinner from '../../components/ui/Spinner';
 import VideoCard from '../../components/VideoCard';
 import {
@@ -7,6 +7,7 @@ import {
   deleteCollection,
   fetchCollection,
   removeCollaborator,
+  reorderCollection,
   updateCollection,
 } from './collectionsApi';
 import styles from './CollectionDetailPage.module.css';
@@ -84,10 +85,20 @@ export default function CollectionDetailPage() {
     }));
   }
 
+  async function moveVideo(index, direction) {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= data.videos.length) return;
+    const reordered = [...data.videos];
+    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
+    setData((prev) => ({ ...prev, videos: reordered }));
+    await reorderCollection(id, reordered.map((v) => v._id));
+  }
+
   if (error) return <p className={styles.error}>{error}</p>;
   if (loading || !data) return <Spinner />;
 
   const isOwner = data.role === 'owner';
+  const canEdit = data.role === 'owner' || data.role === 'editor';
 
   return (
     <div>
@@ -108,6 +119,11 @@ export default function CollectionDetailPage() {
         )}
         <div className={styles.headerActions}>
           {!isOwner && <span className={styles.roleBadge}>Shared with you · {data.role}</span>}
+          {data.videos.length > 0 && (
+            <Link className={styles.playAllButton} to={`/watch/${data.videos[0]._id}?playlist=${id}`}>
+              ▶ Play all
+            </Link>
+          )}
           {isOwner && (
             <button className={styles.deleteButton} onClick={handleDelete}>
               Delete Collection
@@ -169,11 +185,33 @@ export default function CollectionDetailPage() {
       ) : (
         <div className={styles.grid}>
           {data.videos.map((video, index) => (
-            <VideoCard
-              key={video._id}
-              video={video}
-              style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
-            />
+            <div key={video._id} className={styles.gridItem}>
+              <VideoCard
+                video={video}
+                playlistId={id}
+                style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
+              />
+              {canEdit && data.videos.length > 1 && (
+                <div className={styles.reorderRow}>
+                  <button
+                    type="button"
+                    className={styles.reorderButton}
+                    onClick={() => moveVideo(index, -1)}
+                    disabled={index === 0}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.reorderButton}
+                    onClick={() => moveVideo(index, 1)}
+                    disabled={index === data.videos.length - 1}
+                  >
+                    ↓
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

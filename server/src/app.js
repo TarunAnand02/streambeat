@@ -21,6 +21,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const app = express();
 
+// Render (and most PaaS hosts) put the app behind a reverse proxy, which
+// sets X-Forwarded-For. Express doesn't trust that header by default, so
+// express-rate-limit can't safely resolve the real client IP and refuses to
+// run. Trusting exactly one hop matches this kind of single-proxy setup —
+// safe here since only Render's own proxy can reach this process directly.
+if (env.isProd) {
+  app.set('trust proxy', 1);
+}
+
 // The client and API are served from different origins (different ports in
 // dev, likely different subdomains in production), and the client needs to
 // load video/thumbnail media directly via <video>/<img> src URLs — so the

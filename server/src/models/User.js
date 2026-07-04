@@ -28,15 +28,18 @@ const userSchema = new Schema(
       },
       select: false,
     },
+    // No `default: null` here deliberately — a sparse unique index only
+    // excludes documents where the field is entirely absent, not documents
+    // where it's explicitly null. A default of null would put every
+    // non-OAuth user in the index with the same null value, so the second
+    // such user to ever register would collide on this unique index.
     googleId: {
       type: String,
-      default: null,
       unique: true,
       sparse: true,
     },
     githubId: {
       type: String,
-      default: null,
       unique: true,
       sparse: true,
     },

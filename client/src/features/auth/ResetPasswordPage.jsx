@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import PasswordInput from '../../components/ui/PasswordInput';
 import { resetPassword } from './authApi';
 import styles from './AuthForm.module.css';
 
@@ -54,10 +55,9 @@ export default function ResetPasswordPage() {
             <label className={styles.label} htmlFor="password">
               New password
             </label>
-            <input
+            <PasswordInput
               id="password"
               className={styles.input}
-              type="password"
               autoComplete="new-password"
               required
               minLength={8}
@@ -69,10 +69,9 @@ export default function ResetPasswordPage() {
             <label className={styles.label} htmlFor="confirmPassword">
               Confirm new password
             </label>
-            <input
+            <PasswordInput
               id="confirmPassword"
               className={styles.input}
-              type="password"
               autoComplete="new-password"
               required
               minLength={8}

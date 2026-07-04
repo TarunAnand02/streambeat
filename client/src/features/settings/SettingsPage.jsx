@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setCredentials, updateUser } from '../auth/authSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { changePassword, updateProfile } from './settingsApi';
+import PasswordInput from '../../components/ui/PasswordInput';
 import AppearanceSection from './AppearanceSection';
 import SessionsSection from './SessionsSection';
 import TwoFactorSection from './TwoFactorSection';
@@ -123,10 +124,9 @@ export default function SettingsPage() {
             <label className={styles.label} htmlFor="currentPassword">
               Current password
             </label>
-            <input
+            <PasswordInput
               id="currentPassword"
               className={styles.input}
-              type="password"
               autoComplete="current-password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -137,10 +137,9 @@ export default function SettingsPage() {
             <label className={styles.label} htmlFor="newPassword">
               New password
             </label>
-            <input
+            <PasswordInput
               id="newPassword"
               className={styles.input}
-              type="password"
               autoComplete="new-password"
               minLength={8}
               value={newPassword}
@@ -152,10 +151,9 @@ export default function SettingsPage() {
             <label className={styles.label} htmlFor="confirmPassword">
               Confirm new password
             </label>
-            <input
+            <PasswordInput
               id="confirmPassword"
               className={styles.input}
-              type="password"
               autoComplete="new-password"
               minLength={8}
               value={confirmPassword}

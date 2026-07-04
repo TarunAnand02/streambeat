@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import PasswordInput from '../../components/ui/PasswordInput';
 import OAuthButtons from './OAuthButtons';
 import { loginUser, verifyTwoFactorLogin } from './authSlice';
 import styles from './AuthForm.module.css';
@@ -109,10 +110,9 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
-            <input
+            <PasswordInput
               id="password"
               className={styles.input}
-              type="password"
               autoComplete="current-password"
               required
               value={password}

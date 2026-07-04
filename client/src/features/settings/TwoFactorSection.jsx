@@ -4,6 +4,7 @@ import { updateUser } from '../auth/authSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/toast/ToastProvider';
 import { disable2fa, enable2fa, setup2fa } from './settingsApi';
+import PasswordInput from '../../components/ui/PasswordInput';
 import styles from './SettingsPage.module.css';
 
 // 'idle' -> 'setup' (QR shown, waiting for a code to confirm) -> 'backupCodes'
@@ -143,10 +144,9 @@ export default function TwoFactorSection() {
             <label className={styles.label} htmlFor="disablePassword">
               Confirm your password to disable 2FA
             </label>
-            <input
+            <PasswordInput
               id="disablePassword"
               className={styles.input}
-              type="password"
               autoComplete="current-password"
               required
               value={password}

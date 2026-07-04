@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
+import PasswordInput from '../../components/ui/PasswordInput';
 import OAuthButtons from './OAuthButtons';
 import { loginUser, registerUser } from './authSlice';
 import styles from './AuthForm.module.css';
@@ -64,10 +65,9 @@ export default function RegisterPage() {
             <label className={styles.label} htmlFor="password">
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
               className={styles.input}
-              type="password"
               autoComplete="new-password"
               minLength={8}
               required

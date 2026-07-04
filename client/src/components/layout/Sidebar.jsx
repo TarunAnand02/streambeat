@@ -9,12 +9,17 @@ const navItems = [
   { to: '/import', label: 'Import', icon: '📥', protected: true },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const { user, isAuthenticated } = useAuth();
 
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.logo}>StreamBeat</div>
+    <aside className={isOpen ? `${styles.sidebar} ${styles.open}` : styles.sidebar}>
+      <div className={styles.topRow}>
+        <div className={styles.logo}>StreamBeat</div>
+        <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Close menu">
+          ✕
+        </button>
+      </div>
       <nav className={styles.nav}>
         {navItems.map((item) =>
           item.protected && !isAuthenticated ? null : (

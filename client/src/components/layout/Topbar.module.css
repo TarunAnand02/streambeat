@@ -13,10 +13,45 @@
   backdrop-filter: blur(6px);
 }
 
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font-size: 18px;
+  border-radius: var(--radius-sm);
+}
+
+.menuButton:hover {
+  background: var(--color-surface-raised);
+}
+
 .searchWrapper {
   position: relative;
   flex: 1;
   max-width: 480px;
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .menuButton {
+    display: flex;
+  }
+
+  .searchInput {
+    /* iOS Safari auto-zooms on focus if a text input's font-size is under
+       16px — keeping it at 16px here avoids that jarring zoom-in. */
+    font-size: 16px;
+  }
 }
 
 .searchInput {

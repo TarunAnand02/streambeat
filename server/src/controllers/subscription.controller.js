@@ -29,11 +29,12 @@ export const unsubscribe = asyncHandler(async (req, res) => {
 export const listSubscriptions = asyncHandler(async (req, res) => {
   const subs = await Subscription.find({ subscriber: req.userId })
     .sort({ createdAt: -1 })
-    .populate('channel', 'username avatarUrl bio');
+    .populate('channel', 'username avatarUrl bio')
+    .lean();
 
   const channels = await Promise.all(
     subs.map(async (sub) => ({
-      ...sub.channel.toObject(),
+      ...sub.channel,
       subscriberCount: await Subscription.countDocuments({ channel: sub.channel._id }),
     }))
   );
@@ -45,7 +46,7 @@ export const getFeed = asyncHandler(async (req, res) => {
   const page = Number(req.query.page) || 1;
   const limit = 24;
 
-  const subs = await Subscription.find({ subscriber: req.userId }).select('channel');
+  const subs = await Subscription.find({ subscriber: req.userId }).select('channel').lean();
   const channelIds = subs.map((s) => s.channel);
 
   if (channelIds.length === 0) {
@@ -56,7 +57,8 @@ export const getFeed = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit + 1)
-    .populate('uploader', 'username avatarUrl');
+    .populate('uploader', 'username avatarUrl')
+    .lean();
 
   res.json({ videos: videos.slice(0, limit), page, hasMore: videos.length > limit });
 });

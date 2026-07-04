@@ -1,3 +1,4 @@
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
@@ -69,6 +70,18 @@ app.use(
   cors({
     origin: env.clientOrigin,
     credentials: true,
+  })
+);
+// gzip/brotli-negotiated compression for JSON responses and the served
+// client bundle — video/thumbnail bytes are already-compressed binary
+// formats (and served via manual Range-aware streaming), so skip those
+// explicitly rather than relying only on mime-type sniffing.
+app.use(
+  compression({
+    filter: (req, res) => {
+      if (req.path.endsWith('/stream') || req.path.endsWith('/thumbnail')) return false;
+      return compression.filter(req, res);
+    },
   })
 );
 app.use(express.json());

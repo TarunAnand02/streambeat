@@ -25,12 +25,14 @@ export const createCollection = asyncHandler(async (req, res) => {
 export const listCollections = asyncHandler(async (req, res) => {
   const collections = await Collection.find({
     $or: [{ owner: req.userId }, { 'collaborators.user': req.userId }],
-  }).sort({ createdAt: -1 });
+  })
+    .sort({ createdAt: -1 })
+    .lean();
 
   const withCounts = await Promise.all(
     collections.map(async (collection) => {
       const videoCount = await Video.countDocuments({ collections: collection._id });
-      return { ...collection.toObject(), videoCount, role: roleFor(collection, req.userId) };
+      return { ...collection, videoCount, role: roleFor(collection, req.userId) };
     })
   );
 

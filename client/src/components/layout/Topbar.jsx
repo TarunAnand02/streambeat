@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { suggestVideos, thumbnailUrl } from '../../features/videos/videosApi';
 import styles from './Topbar.module.css';
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -78,6 +78,9 @@ export default function Topbar() {
 
   return (
     <header className={styles.topbar}>
+      <button type="button" className={styles.menuButton} onClick={onMenuClick} aria-label="Open menu">
+        ☰
+      </button>
       <div className={styles.searchWrapper} ref={searchRef}>
         <form className={styles.searchForm} onSubmit={handleSubmit}>
           <input

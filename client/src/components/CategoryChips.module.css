@@ -4,6 +4,7 @@
   overflow-x: auto;
   padding-bottom: 12px;
   margin-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chip {

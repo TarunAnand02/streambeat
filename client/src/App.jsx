@@ -1,25 +1,31 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Route, Routes } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import Spinner from './components/ui/Spinner';
 import { restoreSession } from './features/auth/authSlice';
-import ForgotPasswordPage from './features/auth/ForgotPasswordPage';
-import LoginPage from './features/auth/LoginPage';
-import RegisterPage from './features/auth/RegisterPage';
-import ResetPasswordPage from './features/auth/ResetPasswordPage';
-import AnalyticsPage from './features/analytics/AnalyticsPage';
-import ChannelPage from './features/channel/ChannelPage';
-import SubscriptionsPage from './features/channel/SubscriptionsPage';
-import CollectionDetailPage from './features/collections/CollectionDetailPage';
-import CollectionsPage from './features/collections/CollectionsPage';
-import HelpPage from './features/help/HelpPage';
-import HistoryPage from './features/history/HistoryPage';
-import HomePage from './features/videos/HomePage';
-import ImportPage from './features/videos/ImportPage';
-import SearchResultsPage from './features/videos/SearchResultsPage';
-import UploadPage from './features/videos/UploadPage';
-import WatchPage from './features/videos/WatchPage';
+
+// Route-level code splitting: each page becomes its own chunk, fetched only
+// when a user actually navigates there — first load only needs whichever
+// page they land on (usually Home), not the whole app (upload forms,
+// analytics charts, admin help editor, etc. all deferred).
+const ForgotPasswordPage = lazy(() => import('./features/auth/ForgotPasswordPage'));
+const LoginPage = lazy(() => import('./features/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./features/auth/RegisterPage'));
+const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage'));
+const AnalyticsPage = lazy(() => import('./features/analytics/AnalyticsPage'));
+const ChannelPage = lazy(() => import('./features/channel/ChannelPage'));
+const SubscriptionsPage = lazy(() => import('./features/channel/SubscriptionsPage'));
+const CollectionDetailPage = lazy(() => import('./features/collections/CollectionDetailPage'));
+const CollectionsPage = lazy(() => import('./features/collections/CollectionsPage'));
+const HelpPage = lazy(() => import('./features/help/HelpPage'));
+const HistoryPage = lazy(() => import('./features/history/HistoryPage'));
+const HomePage = lazy(() => import('./features/videos/HomePage'));
+const ImportPage = lazy(() => import('./features/videos/ImportPage'));
+const SearchResultsPage = lazy(() => import('./features/videos/SearchResultsPage'));
+const UploadPage = lazy(() => import('./features/videos/UploadPage'));
+const WatchPage = lazy(() => import('./features/videos/WatchPage'));
 
 export default function App() {
   const dispatch = useDispatch();
@@ -29,29 +35,31 @@ export default function App() {
   }, [dispatch]);
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Suspense fallback={<Spinner />}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/watch/:videoId" element={<WatchPage />} />
-        <Route path="/search" element={<SearchResultsPage />} />
-        <Route path="/channel/:userId" element={<ChannelPage />} />
-        <Route path="/help" element={<HelpPage />} />
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/watch/:videoId" element={<WatchPage />} />
+          <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/channel/:userId" element={<ChannelPage />} />
+          <Route path="/help" element={<HelpPage />} />
 
-        <Route element={<ProtectedRoute />}>
-          <Route path="/upload" element={<UploadPage />} />
-          <Route path="/import" element={<ImportPage />} />
-          <Route path="/collections" element={<CollectionsPage />} />
-          <Route path="/collections/:id" element={<CollectionDetailPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/subscriptions" element={<SubscriptionsPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/import" element={<ImportPage />} />
+            <Route path="/collections" element={<CollectionsPage />} />
+            <Route path="/collections/:id" element={<CollectionDetailPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/subscriptions" element={<SubscriptionsPage />} />
+          </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

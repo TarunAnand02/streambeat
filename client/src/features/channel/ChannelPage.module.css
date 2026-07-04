@@ -1,12 +1,14 @@
 .header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 20px;
   margin-bottom: 32px;
 }
 
 .headerInfo {
   flex: 1;
+  min-width: 160px;
 }
 
 .selectToggle {

@@ -8,11 +8,12 @@ export const listHistory = asyncHandler(async (req, res) => {
     .populate({
       path: 'video',
       populate: { path: 'uploader', select: 'username avatarUrl' },
-    });
+    })
+    .lean();
 
   // A video may have been deleted since it was watched — drop those entries
   // from the response rather than erroring or showing a broken card.
-  const videos = entries.filter((e) => e.video).map((e) => ({ ...e.video.toObject(), watchedAt: e.watchedAt }));
+  const videos = entries.filter((e) => e.video).map((e) => ({ ...e.video, watchedAt: e.watchedAt }));
 
   res.json({ videos });
 });

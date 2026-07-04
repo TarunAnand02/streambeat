@@ -28,6 +28,10 @@
 
 * {
   box-sizing: border-box;
+  /* Removes the gray flash Android/iOS shows on tap — we already have our
+     own :active press-feedback below, so the native highlight just doubles
+     up and looks like a glitch. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -37,15 +41,33 @@ body,
   margin: 0;
 }
 
+html {
+  /* Stops iOS from silently bumping font sizes up when the phone rotates
+     to landscape, which otherwise reflows text unexpectedly. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overscroll-behavior-y: none;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+button,
+a,
+input[type='checkbox'],
+input[type='radio'] {
+  /* Removes the ~300ms delay mobile browsers add before firing click, so
+     taps feel instant, and stops double-tap-to-zoom on controls that were
+     never meant to be zoom targets. */
+  touch-action: manipulation;
 }
 
 button {

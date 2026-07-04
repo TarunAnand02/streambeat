@@ -3,6 +3,7 @@
   gap: 8px;
   overflow-x: auto;
   margin-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chip {

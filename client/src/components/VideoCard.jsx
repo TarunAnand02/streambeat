@@ -33,7 +33,13 @@ export default function VideoCard({ video, style, selectable, selected, onToggle
       <div className={styles.thumbWrapper}>
         {isYoutube ? (
           video.youtubeThumbnailUrl ? (
-            <img className={styles.thumbMedia} src={video.youtubeThumbnailUrl} alt="" />
+            <img
+              className={styles.thumbMedia}
+              src={video.youtubeThumbnailUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             <div className={styles.thumbPlaceholder}>🎬</div>
           )
@@ -47,7 +53,13 @@ export default function VideoCard({ video, style, selectable, selected, onToggle
             preload="metadata"
           />
         ) : video.thumbnailFilename ? (
-          <img className={styles.thumbMedia} src={thumbnailUrl(video._id)} alt="" />
+          <img
+            className={styles.thumbMedia}
+            src={thumbnailUrl(video._id)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <div className={styles.thumbPlaceholder}>🎬</div>
         )}

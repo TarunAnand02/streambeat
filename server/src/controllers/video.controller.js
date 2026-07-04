@@ -154,7 +154,8 @@ export const listVideos = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate('uploader', 'username avatarUrl');
+    .populate('uploader', 'username avatarUrl')
+    .lean();
 
   res.json({ videos, page, limit });
 });
@@ -463,7 +464,8 @@ export const searchVideos = asyncHandler(async (req, res) => {
   const videos = await Video.find(filter, { score: { $meta: 'textScore' } })
     .sort({ score: { $meta: 'textScore' } })
     .limit(50)
-    .populate('uploader', 'username avatarUrl');
+    .populate('uploader', 'username avatarUrl')
+    .lean();
 
   res.json({ videos });
 });
@@ -477,7 +479,8 @@ export const suggestVideos = asyncHandler(async (req, res) => {
     { score: { $meta: 'textScore' }, title: 1, source: 1, thumbnailFilename: 1, youtubeThumbnailUrl: 1 }
   )
     .sort({ score: { $meta: 'textScore' } })
-    .limit(6);
+    .limit(6)
+    .lean();
 
   res.json({ videos });
 });
@@ -494,14 +497,16 @@ export const getRecommended = asyncHandler(async (req, res) => {
     const trending = await Video.find()
       .sort({ views: -1 })
       .limit(RECOMMENDATION_LIMIT)
-      .populate('uploader', 'username avatarUrl');
+      .populate('uploader', 'username avatarUrl')
+      .lean();
     return res.json({ videos: trending });
   }
 
   const history = await WatchHistory.find({ user: req.userId })
     .sort({ watchedAt: -1 })
     .limit(50)
-    .populate('video', 'category tags');
+    .populate('video', 'category tags')
+    .lean();
 
   const watchedIds = history.map((h) => h.video?._id).filter(Boolean);
 
@@ -509,7 +514,8 @@ export const getRecommended = asyncHandler(async (req, res) => {
     const trending = await Video.find({ uploader: { $ne: req.userId } })
       .sort({ views: -1 })
       .limit(RECOMMENDATION_LIMIT)
-      .populate('uploader', 'username avatarUrl');
+      .populate('uploader', 'username avatarUrl')
+      .lean();
     return res.json({ videos: trending });
   }
 
@@ -529,7 +535,8 @@ export const getRecommended = asyncHandler(async (req, res) => {
   })
     .sort({ createdAt: -1 })
     .limit(RECOMMENDATION_CANDIDATE_POOL)
-    .populate('uploader', 'username avatarUrl');
+    .populate('uploader', 'username avatarUrl')
+    .lean();
 
   const scored = candidates.map((video) => {
     let score = categoryCounts.get(video.category) || 0;

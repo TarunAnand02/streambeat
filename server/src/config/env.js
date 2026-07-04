@@ -47,6 +47,12 @@ export const env = {
     pass: process.env.SMTP_PASS || null,
     from: process.env.SMTP_FROM || process.env.SMTP_USER || null,
   },
+  // Optional — preferred over SMTP when set. Resend sends over HTTPS, which
+  // works on hosts (e.g. Render's free tier) that block outbound SMTP ports.
+  resend: {
+    apiKey: process.env.RESEND_API_KEY || null,
+    from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+  },
   // Optional S3-compatible cloud storage config — works with Supabase
   // Storage, Cloudflare R2, Backblaze B2, MinIO, etc. When unset, uploads
   // stay on local disk exactly as before — nothing about local storage

@@ -127,6 +127,23 @@ textarea {
   font-family: inherit;
 }
 
+/* Chrome/Edge/Safari paint autofilled inputs with their own white/yellow
+   background and ignore our CSS `background`, regardless of theme — this
+   also silently sank the password show/hide icon's contrast, since it's
+   colored for our own dark input background, not the browser's white one.
+   The huge inset box-shadow is the standard trick to override it; the long
+   transition delay stops the (autofilled) background from visibly flashing
+   white for a moment before this rule takes over. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  box-shadow: 0 0 0 1000px var(--color-surface-raised) inset !important;
+  -webkit-text-fill-color: var(--color-text) !important;
+  caret-color: var(--color-text);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

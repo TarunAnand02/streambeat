@@ -3,6 +3,7 @@ import path from 'path';
 import { Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 import { Collection } from '../models/Collection.js';
+import { Comment } from '../models/Comment.js';
 import { Note } from '../models/Note.js';
 import { Subscription } from '../models/Subscription.js';
 import { Video } from '../models/Video.js';
@@ -173,7 +174,7 @@ export const listVideos = asyncHandler(async (req, res) => {
 // rather than 403 so a private video's existence isn't revealed. Shared by
 // every route that exposes a video's metadata or raw asset bytes (stream,
 // thumbnail, caption) — not just the metadata endpoint.
-function assertViewable(video, userId) {
+export function assertViewable(video, userId) {
   const isOwner = userId && video.uploader._id
     ? video.uploader._id.toString() === userId
     : video.uploader.toString() === userId;
@@ -270,9 +271,24 @@ export const streamVideo = asyncHandler(async (req, res) => {
     return;
   }
 
-  const match = /bytes=(\d*)-(\d*)/.exec(range);
-  const start = match[1] ? parseInt(match[1], 10) : 0;
-  const end = match[2] ? parseInt(match[2], 10) : stat.size - 1;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
+  if (!match || (match[1] === '' && match[2] === '')) {
+    res.writeHead(416, { 'Content-Range': `bytes */${stat.size}` });
+    res.end();
+    return;
+  }
+
+  let start;
+  let end;
+  if (match[1] === '') {
+    // Suffix range, e.g. "bytes=-500" — the last 500 bytes of the file.
+    const suffixLength = parseInt(match[2], 10);
+    start = Math.max(stat.size - suffixLength, 0);
+    end = stat.size - 1;
+  } else {
+    start = parseInt(match[1], 10);
+    end = match[2] ? parseInt(match[2], 10) : stat.size - 1;
+  }
 
   if (start >= stat.size || end >= stat.size || start > end) {
     res.writeHead(416, { 'Content-Range': `bytes */${stat.size}` });
@@ -490,12 +506,17 @@ export const deleteVideo = asyncHandler(async (req, res) => {
   await Note.deleteMany({ video: video._id });
   await ViewEvent.deleteMany({ video: video._id });
   await WatchHistory.deleteMany({ video: video._id });
+  await Comment.deleteMany({ video: video._id });
   await video.deleteOne();
   res.status(204).send();
 });
 
 export const bulkAction = asyncHandler(async (req, res) => {
-  const { videoIds, action, tags, collectionId } = req.body;
+  const { videoIds: rawVideoIds, action, tags, collectionId } = req.body;
+  // De-duplicate client-supplied ids so a duplicate in the array can't cause
+  // a spurious "not found" (Video.find naturally de-dupes matches, but the
+  // requested-count comparison below needs to match against unique ids too).
+  const videoIds = [...new Set(rawVideoIds.map(String))];
 
   const videos = await Video.find({ _id: { $in: videoIds } });
   if (videos.length !== videoIds.length) {
@@ -513,6 +534,7 @@ export const bulkAction = asyncHandler(async (req, res) => {
     await Note.deleteMany({ video: { $in: videoIds } });
     await ViewEvent.deleteMany({ video: { $in: videoIds } });
     await WatchHistory.deleteMany({ video: { $in: videoIds } });
+    await Comment.deleteMany({ video: { $in: videoIds } });
     await Video.deleteMany({ _id: { $in: videoIds } });
     return res.json({ action, count: videoIds.length });
   }

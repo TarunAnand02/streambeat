@@ -5,7 +5,12 @@ import { env } from '../config/env.js';
 import { VIDEO_STORAGE_DIR } from '../middleware/upload.middleware.js';
 import { Video } from '../models/Video.js';
 import { randomFilenameFor } from './filename.js';
-import { getSignedFileUrl, isCloudStorageConfigured, uploadFileToCloud } from './storage.js';
+import {
+  deleteFileFromCloud,
+  getSignedFileUrl,
+  isCloudStorageConfigured,
+  uploadFileToCloud,
+} from './storage.js';
 
 // Only generate variants strictly smaller than the source — no upscaling.
 const TARGET_HEIGHTS = [1080, 720, 480, 360];
@@ -70,6 +75,13 @@ export async function transcodeVideo(videoId) {
   video.transcodeStatus = 'processing';
   await video.save();
 
+  // Declared outside the try block so the catch handler can clean up any
+  // variants that finished successfully before a later one failed — they're
+  // never persisted to video.variants on failure, so nothing else would ever
+  // reference or delete them otherwise (a silent, unbounded storage leak on
+  // every partial transcode failure).
+  const variants = [];
+
   try {
     const inputSource =
       video.storageProvider === 'r2'
@@ -81,11 +93,16 @@ export async function transcodeVideo(videoId) {
       ? TARGET_HEIGHTS.filter((h) => h < sourceHeight)
       : TARGET_HEIGHTS.slice(2); // ffprobe unavailable/failed — play it safe with smaller variants only
 
-    const variants = [];
     for (const height of targets) {
       const filename = randomFilenameFor('video/mp4', 'video');
       const outputPath = path.join(VIDEO_STORAGE_DIR, filename);
-      await runFfmpeg(inputSource, outputPath, height);
+      try {
+        await runFfmpeg(inputSource, outputPath, height);
+      } catch (ffmpegErr) {
+        // ffmpeg can leave a partial file behind even on failure.
+        await fs.promises.unlink(outputPath).catch(() => {});
+        throw ffmpegErr;
+      }
       const stat = await fs.promises.stat(outputPath);
 
       let storageProvider = 'local';
@@ -101,6 +118,15 @@ export async function transcodeVideo(videoId) {
     video.transcodeStatus = 'ready';
     await video.save();
   } catch (err) {
+    for (const variant of variants) {
+      if (variant.storageProvider === 'r2') {
+        // eslint-disable-next-line no-await-in-loop
+        await deleteFileFromCloud(variant.filename).catch(() => {});
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        await fs.promises.unlink(path.join(VIDEO_STORAGE_DIR, variant.filename)).catch(() => {});
+      }
+    }
     video.transcodeStatus = 'failed';
     await video.save();
     // eslint-disable-next-line no-console

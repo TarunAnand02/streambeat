@@ -7,13 +7,13 @@ import { loginUser, verifyTwoFactorLogin } from './authSlice';
 import styles from './AuthForm.module.css';
 
 export default function LoginPage() {
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [tempToken, setTempToken] = useState(null);
+  const [tempToken, setTempToken] = useState(location.state?.oauthTempToken || null);
   const [code, setCode] = useState('');
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { status, error } = useSelector((state) => state.auth);
 
@@ -82,7 +82,12 @@ export default function LoginPage() {
         {location.state?.resetSuccess && (
           <div className={styles.success}>Your password has been reset — log in below.</div>
         )}
-        {searchParams.get('oauthError') && (
+        {searchParams.get('oauthError') === 'email-conflict' && (
+          <div className={styles.error}>
+            An account with that email already exists — log in with your password instead.
+          </div>
+        )}
+        {searchParams.get('oauthError') && searchParams.get('oauthError') !== 'email-conflict' && (
           <div className={styles.error}>That sign-in attempt didn't work — please try again.</div>
         )}
         {error && <div className={styles.error}>{error}</div>}

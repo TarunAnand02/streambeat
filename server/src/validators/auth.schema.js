@@ -85,8 +85,10 @@ export const enable2faSchema = z.object({
 });
 
 export const disable2faSchema = z.object({
+  // Optional — accounts with no local password (Google/GitHub sign-in only)
+  // have nothing to check it against; see disable2fa in auth.controller.js.
   body: z.object({
-    password: z.string().min(1, 'Password is required'),
+    password: z.string().optional(),
   }),
   query: z.any(),
   params: z.any(),

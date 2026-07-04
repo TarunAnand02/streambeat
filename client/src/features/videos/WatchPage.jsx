@@ -186,9 +186,13 @@ export default function WatchPage() {
 
   async function handleDelete() {
     if (!window.confirm('Delete this video? This cannot be undone.')) return;
-    await deleteVideo(videoId);
-    showToast('Video deleted', { type: 'success' });
-    navigate(`/channel/${user.id}`);
+    try {
+      await deleteVideo(videoId);
+      showToast('Video deleted', { type: 'success' });
+      navigate(`/channel/${user.id}`);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not delete video', { type: 'error' });
+    }
   }
 
   const getCurrentTime = useCallback(() => {

@@ -7,11 +7,14 @@ import styles from './SettingsPage.module.css';
 
 export default function SessionsSection() {
   const [sessions, setSessions] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const [revokingId, setRevokingId] = useState(null);
   const showToast = useToast();
 
   useEffect(() => {
-    fetchSessions().then(setSessions);
+    fetchSessions()
+      .then(setSessions)
+      .catch(() => setLoadError(true));
   }, []);
 
   async function handleRevoke(id) {
@@ -20,6 +23,8 @@ export default function SessionsSection() {
       await revokeSession(id);
       setSessions((prev) => prev.filter((s) => s.id !== id));
       showToast('Signed out of that device', { type: 'success' });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not sign out that device', { type: 'error' });
     } finally {
       setRevokingId(null);
     }
@@ -29,7 +34,9 @@ export default function SessionsSection() {
     <section className={styles.section}>
       <h2 className={styles.sectionHeading}>Sessions</h2>
       <p className={styles.hint}>Devices currently signed in to your account.</p>
-      {sessions === null ? (
+      {loadError ? (
+        <p className={styles.error}>Could not load sessions — try reloading the page.</p>
+      ) : sessions === null ? (
         <p className={styles.hint}>Loading…</p>
       ) : sessions.length === 0 ? (
         <p className={styles.hint}>No active sessions.</p>

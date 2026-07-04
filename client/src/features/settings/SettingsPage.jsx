@@ -117,54 +117,61 @@ export default function SettingsPage() {
 
       <section className={styles.section}>
         <h2 className={styles.sectionHeading}>Password</h2>
-        <form className={styles.form} onSubmit={handlePasswordSubmit}>
-          {passwordError && <div className={styles.error}>{passwordError}</div>}
-          {passwordSaved && <div className={styles.success}>Password changed.</div>}
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="currentPassword">
-              Current password
-            </label>
-            <PasswordInput
-              id="currentPassword"
-              className={styles.input}
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="newPassword">
-              New password
-            </label>
-            <PasswordInput
-              id="newPassword"
-              className={styles.input}
-              autoComplete="new-password"
-              minLength={8}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="confirmPassword">
-              Confirm new password
-            </label>
-            <PasswordInput
-              id="confirmPassword"
-              className={styles.input}
-              autoComplete="new-password"
-              minLength={8}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button className={styles.submit} type="submit" disabled={passwordSaving}>
-            {passwordSaving ? 'Changing…' : 'Change password'}
-          </button>
-        </form>
+        {user?.hasPassword ? (
+          <form className={styles.form} onSubmit={handlePasswordSubmit}>
+            {passwordError && <div className={styles.error}>{passwordError}</div>}
+            {passwordSaved && <div className={styles.success}>Password changed.</div>}
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="currentPassword">
+                Current password
+              </label>
+              <PasswordInput
+                id="currentPassword"
+                className={styles.input}
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="newPassword">
+                New password
+              </label>
+              <PasswordInput
+                id="newPassword"
+                className={styles.input}
+                autoComplete="new-password"
+                minLength={8}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="confirmPassword">
+                Confirm new password
+              </label>
+              <PasswordInput
+                id="confirmPassword"
+                className={styles.input}
+                autoComplete="new-password"
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button className={styles.submit} type="submit" disabled={passwordSaving}>
+              {passwordSaving ? 'Changing…' : 'Change password'}
+            </button>
+          </form>
+        ) : (
+          <p className={styles.hint}>
+            This account signs in with Google/GitHub and has no password set. Use "Forgot
+            password?" on the login page if you'd like to set one.
+          </p>
+        )}
       </section>
 
       <TwoFactorSection />

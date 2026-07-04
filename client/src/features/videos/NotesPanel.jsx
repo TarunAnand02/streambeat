@@ -40,8 +40,12 @@ export default function NotesPanel({ videoId, getCurrentTime, onSeek }) {
   }
 
   async function handleDelete(noteId) {
-    await deleteNote(videoId, noteId);
-    setNotes((prev) => prev.filter((n) => n._id !== noteId));
+    try {
+      await deleteNote(videoId, noteId);
+      setNotes((prev) => prev.filter((n) => n._id !== noteId));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not delete note');
+    }
   }
 
   if (loading) return null;

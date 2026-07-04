@@ -140,19 +140,21 @@ export default function TwoFactorSection() {
         <h2 className={styles.sectionHeading}>Two-factor authentication</h2>
         {error && <div className={styles.error}>{error}</div>}
         <form className={styles.form} onSubmit={handleDisable}>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="disablePassword">
-              Confirm your password to disable 2FA
-            </label>
-            <PasswordInput
-              id="disablePassword"
-              className={styles.input}
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+          {user?.hasPassword && (
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="disablePassword">
+                Confirm your password to disable 2FA
+              </label>
+              <PasswordInput
+                id="disablePassword"
+                className={styles.input}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          )}
           <div className={styles.actionsRow}>
             <button className={styles.dangerButton} type="submit" disabled={busy}>
               {busy ? 'Disabling…' : 'Disable 2FA'}

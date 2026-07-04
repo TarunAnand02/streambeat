@@ -15,6 +15,16 @@ export default function OAuthCallbackPage() {
 
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
+
+    // The account has 2FA enabled — OAuth alone isn't enough to log in, same
+    // rule the password login form already enforces. Hand off to the login
+    // page's existing TOTP/backup-code step instead of finishing sign-in.
+    if (hash.get('requires2FA')) {
+      const tempToken = hash.get('tempToken');
+      navigate('/login', { replace: true, state: { oauthTempToken: tempToken } });
+      return;
+    }
+
     const accessToken = hash.get('token');
     if (!accessToken) {
       setError(true);

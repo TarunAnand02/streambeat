@@ -64,6 +64,9 @@ function toPublicUser(user) {
     isAdmin: user.isAdmin,
     emailVerified: user.emailVerified,
     twoFactorEnabled: user.twoFactorEnabled,
+    // Google/GitHub-only accounts never set a local password — the client
+    // uses this to skip asking for one on password-gated settings actions.
+    hasPassword: Boolean(user.passwordHash),
   };
 }
 
@@ -79,11 +82,16 @@ async function sendVerificationFor(user) {
 
   const verifyUrl = `${env.clientOrigin}/verify-email?token=${rawToken}`;
   if (isMailerConfigured()) {
-    sendVerificationEmail(user.email, verifyUrl).catch(() => {
+    sendVerificationEmail(user.email, verifyUrl).catch((err) => {
+      // Never log the raw link in production — it's a working
+      // account-verification URL for this user.
       // eslint-disable-next-line no-console
-      console.log(`[verify-email] send failed, link still valid: ${user.email} -> ${verifyUrl}`);
+      console.log(
+        `[verify-email] send failed for "${user.email}": ${err.message}` +
+          (env.isProd ? '' : ` — link: ${verifyUrl}`)
+      );
     });
-  } else {
+  } else if (!env.isProd) {
     // eslint-disable-next-line no-console
     console.log(`[verify-email] ${user.email} -> ${verifyUrl}`);
   }
@@ -147,7 +155,10 @@ export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email }).select('+passwordHash');
-  if (!user) {
+  // No passwordHash means the account was created via Google/GitHub and
+  // never set a local password — bcrypt.compare would throw on a
+  // non-string hash, so this must be checked before calling it.
+  if (!user || !user.passwordHash) {
     throw new ApiError(401, 'Invalid email or password');
   }
 
@@ -177,7 +188,9 @@ export const verifyLogin2fa = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'That login attempt has expired — please log in again');
   }
 
-  const user = await User.findById(payload.sub).select('+twoFactorSecret +twoFactorBackupCodeHashes');
+  const user = await User.findById(payload.sub).select(
+    '+twoFactorSecret +twoFactorBackupCodeHashes +passwordHash'
+  );
   if (!user || !user.twoFactorEnabled) {
     throw new ApiError(401, 'That login attempt has expired — please log in again');
   }
@@ -250,8 +263,13 @@ export const disable2fa = asyncHandler(async (req, res) => {
   const user = await User.findById(req.userId).select('+passwordHash');
   if (!user) throw new ApiError(404, 'User not found');
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) throw new ApiError(401, 'Incorrect password');
+  // Google/GitHub-only accounts have no local password to confirm with —
+  // the already-authenticated session is the only factor they have, same as
+  // any other protected settings action for such accounts.
+  if (user.passwordHash) {
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) throw new ApiError(401, 'Incorrect password');
+  }
 
   user.twoFactorEnabled = false;
   user.twoFactorSecret = null;
@@ -274,7 +292,7 @@ export const refresh = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid or expired refresh token');
   }
 
-  const user = await User.findById(payload.sub);
+  const user = await User.findById(payload.sub).select('+passwordHash');
   if (!user || user.refreshTokenVersion !== payload.ver) {
     throw new ApiError(401, 'Refresh token has been revoked');
   }
@@ -360,13 +378,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
   const genericMessage = { message: 'If that email is registered, a reset link has been sent.' };
 
-  // eslint-disable-next-line no-console
-  console.log(`[forgot-password] request body email: "${email}"`);
-
   const user = await User.findOne({ email });
-  // eslint-disable-next-line no-console
-  console.log(`[forgot-password] DB lookup result: ${user ? `found user "${user.username}" <${user.email}>` : 'no matching account'}`);
-
   if (!user) {
     return res.json(genericMessage);
   }
@@ -384,16 +396,17 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   // email. The reset token is already saved above, so the link is valid
   // immediately regardless of whether the email itself gets through.
   if (isMailerConfigured()) {
-    sendPasswordResetEmail(user.email, resetUrl)
-      .then(() => {
-        // eslint-disable-next-line no-console
-        console.log(`[forgot-password] sent to "${user.email}"`);
-      })
-      .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.log(`[forgot-password] send failed for "${user.email}": ${err.message}. Link: ${resetUrl}`);
-      });
-  } else {
+    sendPasswordResetEmail(user.email, resetUrl).catch((err) => {
+      // Never log the raw link in production — it's a working
+      // account-takeover URL. It's still returned in devResetUrl below for
+      // local development, where logging it too is harmless.
+      // eslint-disable-next-line no-console
+      console.log(
+        `[forgot-password] send failed for "${user.email}": ${err.message}` +
+          (env.isProd ? '' : ` — link: ${resetUrl}`)
+      );
+    });
+  } else if (!env.isProd) {
     // eslint-disable-next-line no-console
     console.log(`[password reset] ${user.email} -> ${resetUrl}`);
   }
@@ -434,6 +447,16 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   const user = await User.findById(req.userId).select('+passwordHash');
   if (!user) throw new ApiError(404, 'User not found');
+
+  // A Google/GitHub-only account has no current password to check against —
+  // point them at "forgot password" (which works for any account, since it's
+  // driven entirely by a mailed token) to set one for the first time instead.
+  if (!user.passwordHash) {
+    throw new ApiError(
+      400,
+      'This account has no password yet — use "Forgot password?" on the login page to set one'
+    );
+  }
 
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) throw new ApiError(401, 'Current password is incorrect');

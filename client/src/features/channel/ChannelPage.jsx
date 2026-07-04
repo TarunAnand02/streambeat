@@ -78,12 +78,16 @@ export default function ChannelPage() {
 
   async function handleDelete(videoId) {
     if (!window.confirm('Delete this video? This cannot be undone.')) return;
-    await deleteVideo(videoId);
-    setData((prev) => ({
-      ...prev,
-      videos: prev.videos.filter((v) => v._id !== videoId),
-    }));
-    showToast('Video deleted', { type: 'success' });
+    try {
+      await deleteVideo(videoId);
+      setData((prev) => ({
+        ...prev,
+        videos: prev.videos.filter((v) => v._id !== videoId),
+      }));
+      showToast('Video deleted', { type: 'success' });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not delete video', { type: 'error' });
+    }
   }
 
   function handleVideoUpdated(updated) {

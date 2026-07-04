@@ -68,17 +68,25 @@ export default function CollectionDetailPage() {
 
   async function handleDelete() {
     if (!window.confirm('Delete this collection? Videos in it will not be deleted.')) return;
-    await deleteCollection(id);
-    showToast('Collection deleted', { type: 'success' });
-    navigate('/collections');
+    try {
+      await deleteCollection(id);
+      showToast('Collection deleted', { type: 'success' });
+      navigate('/collections');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not delete collection', { type: 'error' });
+    }
   }
 
   async function handleCreateSubfolder() {
     const subName = window.prompt('Subfolder name:');
     if (!subName?.trim()) return;
-    const subfolder = await createCollection({ name: subName.trim(), parent: id });
-    setData((prev) => ({ ...prev, subfolders: [...(prev.subfolders || []), subfolder] }));
-    showToast(`Created "${subfolder.name}"`, { type: 'success' });
+    try {
+      const subfolder = await createCollection({ name: subName.trim(), parent: id });
+      setData((prev) => ({ ...prev, subfolders: [...(prev.subfolders || []), subfolder] }));
+      showToast(`Created "${subfolder.name}"`, { type: 'success' });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not create subfolder', { type: 'error' });
+    }
   }
 
   async function handleAddCollaborator(e) {
@@ -97,14 +105,18 @@ export default function CollectionDetailPage() {
   }
 
   async function handleRemoveCollaborator(userId) {
-    await removeCollaborator(id, userId);
-    setData((prev) => ({
-      ...prev,
-      collection: {
-        ...prev.collection,
-        collaborators: prev.collection.collaborators.filter((c) => c.user._id !== userId),
-      },
-    }));
+    try {
+      await removeCollaborator(id, userId);
+      setData((prev) => ({
+        ...prev,
+        collection: {
+          ...prev.collection,
+          collaborators: prev.collection.collaborators.filter((c) => c.user._id !== userId),
+        },
+      }));
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not remove collaborator', { type: 'error' });
+    }
   }
 
   async function moveVideo(index, direction) {

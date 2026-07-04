@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as commentController from '../controllers/comment.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { optionalAuth, protect } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
   commentIdSchema,
@@ -12,6 +12,7 @@ const router = Router();
 
 router.get(
   '/video/:videoId',
+  optionalAuth,
   validate(listCommentsSchema),
   commentController.listComments
 );

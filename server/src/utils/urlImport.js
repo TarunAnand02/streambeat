@@ -62,8 +62,33 @@ export async function validateImportUrl(urlString) {
   return parsed;
 }
 
+const MAX_REDIRECTS = 5;
+
+// `fetch(url, { redirect: 'follow' })` would silently chase redirects with no
+// re-validation of where they actually land — a public, safe-looking URL can
+// 302 to an internal/loopback/link-local address (or use DNS rebinding
+// between the check and the real request), fully bypassing
+// validateImportUrl's SSRF check. Follow redirects manually instead, so every
+// hop is re-validated the same way the original URL was.
 export async function fetchAndValidateVideoResponse(url) {
-  const response = await fetch(url, { redirect: 'follow' });
+  let currentUrl = url;
+  let response;
+
+  for (let hop = 0; ; hop += 1) {
+    response = await fetch(currentUrl, { redirect: 'manual' });
+    const isRedirect = response.status >= 300 && response.status < 400;
+    if (!isRedirect) break;
+
+    if (hop >= MAX_REDIRECTS) {
+      throw new ApiError(400, 'That URL redirected too many times');
+    }
+    const location = response.headers.get('location');
+    if (!location) {
+      throw new ApiError(400, 'That URL redirected without a destination');
+    }
+    currentUrl = await validateImportUrl(new URL(location, currentUrl).toString());
+  }
+
   if (!response.ok) {
     throw new ApiError(400, `Could not fetch that URL (HTTP ${response.status})`);
   }

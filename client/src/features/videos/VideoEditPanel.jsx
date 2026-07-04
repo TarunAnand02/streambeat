@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { categories } from './categories';
 import { CloseIcon } from '../../components/ui/Icon';
 import { fetchCollections } from '../collections/collectionsApi';
-import { thumbnailUrl, updateThumbnail, updateVideo } from './videosApi';
+import { thumbnailUrl, updateCaption, updateThumbnail, updateVideo } from './videosApi';
 import styles from './VideoEditPanel.module.css';
 
 export default function VideoEditPanel({ video, onSaved }) {
@@ -10,6 +10,7 @@ export default function VideoEditPanel({ video, onSaved }) {
   const [title, setTitle] = useState(video.title);
   const [description, setDescription] = useState(video.description || '');
   const [category, setCategory] = useState(video.category);
+  const [visibility, setVisibility] = useState(video.visibility || 'public');
   const [tags, setTags] = useState(video.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [collections, setCollections] = useState([]);
@@ -18,9 +19,11 @@ export default function VideoEditPanel({ video, onSaved }) {
   );
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [captionFile, setCaptionFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+  const captionInputRef = useRef(null);
 
   useEffect(() => {
     if (open && collections.length === 0) {
@@ -44,6 +47,12 @@ export default function VideoEditPanel({ video, onSaved }) {
     if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
     setThumbnailFile(file);
     setThumbnailPreview(URL.createObjectURL(file));
+  }
+
+  function handleCaptionPick(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setCaptionFile(file);
   }
 
   function addTag() {
@@ -73,11 +82,15 @@ export default function VideoEditPanel({ video, onSaved }) {
         title,
         description,
         category,
+        visibility,
         tags,
         collections: [...selectedCollections],
       });
       if (thumbnailFile) {
         updated = await updateThumbnail(video._id, thumbnailFile);
+      }
+      if (captionFile) {
+        updated = await updateCaption(video._id, captionFile);
       }
       onSaved(updated);
       setOpen(false);
@@ -129,6 +142,27 @@ export default function VideoEditPanel({ video, onSaved }) {
         </div>
       )}
 
+      {video.source === 'upload' && (
+        <div className={styles.section}>
+          <div className={styles.sectionLabel}>Captions</div>
+          <p className={styles.hint}>
+            {captionFile
+              ? `Selected: ${captionFile.name}`
+              : video.captionFilename
+                ? 'A caption track is already set.'
+                : 'No captions yet.'}
+          </p>
+          <button
+            type="button"
+            className={styles.toggleButton}
+            onClick={() => captionInputRef.current?.click()}
+          >
+            {video.captionFilename || captionFile ? 'Replace .vtt file' : 'Upload .vtt file'}
+          </button>
+          <input ref={captionInputRef} type="file" accept=".vtt" onChange={handleCaptionPick} hidden />
+        </div>
+      )}
+
       <div className={styles.section}>
         <div className={styles.sectionLabel}>Title</div>
         <input
@@ -159,6 +193,19 @@ export default function VideoEditPanel({ video, onSaved }) {
               {cat.emoji} {cat.label}
             </option>
           ))}
+        </select>
+      </div>
+
+      <div className={styles.section}>
+        <div className={styles.sectionLabel}>Visibility</div>
+        <select
+          className={styles.textInput}
+          value={visibility}
+          onChange={(e) => setVisibility(e.target.value)}
+        >
+          <option value="public">Public — anyone can find and watch</option>
+          <option value="unlisted">Unlisted — only people with the link</option>
+          <option value="private">Private — only you</option>
         </select>
       </div>
 

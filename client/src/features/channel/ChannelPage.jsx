@@ -1,18 +1,27 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import VideoCard from '../../components/VideoCard';
 import VideoCardSkeleton from '../../components/VideoCardSkeleton';
+import { CalendarIcon, MessageIcon, UploadIcon } from '../../components/ui/Icon';
+import { useToast } from '../../components/toast/ToastProvider';
 import { useAuth } from '../../hooks/useAuth';
+import { timeAgo } from '../../lib/formatDuration';
 import { fetchCollections } from '../collections/collectionsApi';
 import { bulkVideoAction, deleteVideo } from '../videos/videosApi';
 import { fetchChannel } from './channelApi';
 import { subscribe, unsubscribe } from './subscriptionsApi';
 import styles from './ChannelPage.module.css';
 
+function formatJoinDate(dateString) {
+  if (!dateString) return null;
+  return new Date(dateString).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
 export default function ChannelPage() {
   const { userId } = useParams();
   const { user, isAuthenticated, initialized } = useAuth();
   const navigate = useNavigate();
+  const showToast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
@@ -74,6 +83,14 @@ export default function ChannelPage() {
       ...prev,
       videos: prev.videos.filter((v) => v._id !== videoId),
     }));
+    showToast('Video deleted', { type: 'success' });
+  }
+
+  function handleVideoUpdated(updated) {
+    setData((prev) => ({
+      ...prev,
+      videos: prev.videos.map((v) => (v._id === updated._id ? { ...v, ...updated } : v)),
+    }));
   }
 
   function toggleSelected(videoId) {
@@ -94,12 +111,14 @@ export default function ChannelPage() {
     if (!window.confirm(`Delete ${selectedIds.size} video(s)? This cannot be undone.`)) return;
     setBulkBusy(true);
     try {
+      const count = selectedIds.size;
       await bulkVideoAction({ videoIds: [...selectedIds], action: 'delete' });
       setData((prev) => ({
         ...prev,
         videos: prev.videos.filter((v) => !selectedIds.has(v._id)),
       }));
       exitSelectMode();
+      showToast(`${count} video${count === 1 ? '' : 's'} deleted`, { type: 'success' });
     } finally {
       setBulkBusy(false);
     }
@@ -145,8 +164,20 @@ export default function ChannelPage() {
         <div className={styles.avatar}>{data.user.username.charAt(0).toUpperCase()}</div>
         <div className={styles.headerInfo}>
           <h1 className={styles.username}>{data.user.username}</h1>
-          <p className={styles.subscriberCount}>
-            {data.subscriberCount} subscriber{data.subscriberCount === 1 ? '' : 's'}
+          <p className={styles.statsRow}>
+            <span>{data.videos.length} video{data.videos.length === 1 ? '' : 's'}</span>
+            <span>·</span>
+            <span>
+              {data.subscriberCount} follower{data.subscriberCount === 1 ? '' : 's'}
+            </span>
+            {data.user.createdAt && (
+              <>
+                <span>·</span>
+                <span className={styles.joinedRow}>
+                  <CalendarIcon className={styles.inlineIcon} /> Joined {formatJoinDate(data.user.createdAt)}
+                </span>
+              </>
+            )}
           </p>
           {data.user.bio && <p className={styles.bio}>{data.user.bio}</p>}
           {isOwner && <p className={styles.accountEmail}>{user.email}</p>}
@@ -221,6 +252,8 @@ export default function ChannelPage() {
                 selectable={selectMode}
                 selected={selectedIds.has(video._id)}
                 onToggleSelect={toggleSelected}
+                showSaveTo={isOwner && !selectMode}
+                onVideoUpdated={handleVideoUpdated}
               />
               {isOwner && !selectMode && (
                 <button className={styles.deleteButton} onClick={() => handleDelete(video._id)}>
@@ -229,6 +262,40 @@ export default function ChannelPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {data.activity?.length > 0 && (
+        <div className={styles.activitySection}>
+          <h2 className={styles.activityHeading}>Recent activity</h2>
+          <ul className={styles.activityList}>
+            {data.activity.map((item, i) => (
+              <li key={i} className={styles.activityItem}>
+                <span className={styles.activityIcon}>
+                  {item.type === 'upload' ? <UploadIcon /> : <MessageIcon />}
+                </span>
+                <span className={styles.activityText}>
+                  {item.type === 'upload' ? (
+                    <>
+                      Uploaded{' '}
+                      <Link className={styles.activityLink} to={`/watch/${item.video._id}`}>
+                        {item.video.title}
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      Commented on{' '}
+                      <Link className={styles.activityLink} to={`/watch/${item.video._id}`}>
+                        {item.video.title}
+                      </Link>
+                      : “{item.text}”
+                    </>
+                  )}
+                </span>
+                <span className={styles.activityTime}>{timeAgo(item.createdAt)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

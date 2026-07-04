@@ -10,7 +10,9 @@ import { ViewEvent } from '../models/ViewEvent.js';
 import { WatchHistory } from '../models/WatchHistory.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { createNotification } from './notification.controller.js';
 import {
+  CAPTION_STORAGE_DIR,
   THUMBNAIL_STORAGE_DIR,
   VIDEO_STORAGE_DIR,
   assertThumbnailSize,
@@ -18,6 +20,7 @@ import {
 import { randomFilenameFor } from '../utils/filename.js';
 import {
   deleteFileFromCloud,
+  getFileStream,
   getSignedFileUrl,
   isCloudStorageConfigured,
   uploadFileToCloud,
@@ -75,6 +78,7 @@ export const createVideo = asyncHandler(async (req, res) => {
     sizeBytes: videoFile.size,
     uploader: req.userId,
     storageProvider,
+    visibility: req.body.visibility || 'public',
   });
 
   res.status(201).json({ video });
@@ -133,7 +137,11 @@ export const importFromUrl = asyncHandler(async (req, res) => {
 // Shared by listVideos and searchVideos so "narrow by category/tags/duration/
 // collection" behaves identically whether or not a free-text query is active.
 function buildVideoFilter(query) {
-  const filter = {};
+  // Discovery surfaces (home feed, search) never include unlisted/private
+  // videos — even for their own uploader, matching how unlisted/private
+  // videos work on real platforms (reachable only via direct link, or via
+  // the owner's own channel page).
+  const filter = { visibility: 'public' };
   if (query.category) filter.category = query.category;
   if (query.tags?.length) filter.tags = { $all: query.tags };
   if (query.collectionId) filter.collections = query.collectionId;
@@ -160,12 +168,27 @@ export const listVideos = asyncHandler(async (req, res) => {
   res.json({ videos, page, limit });
 });
 
+// Unlisted videos are reachable by anyone with the link (just not listed in
+// feeds/search); private videos are only ever visible to the owner. 404
+// rather than 403 so a private video's existence isn't revealed. Shared by
+// every route that exposes a video's metadata or raw asset bytes (stream,
+// thumbnail, caption) — not just the metadata endpoint.
+function assertViewable(video, userId) {
+  const isOwner = userId && video.uploader._id
+    ? video.uploader._id.toString() === userId
+    : video.uploader.toString() === userId;
+  if (video.visibility === 'private' && !isOwner) {
+    throw new ApiError(404, 'Video not found');
+  }
+}
+
 export const getVideo = asyncHandler(async (req, res) => {
   const video = await Video.findById(req.params.id).populate(
     'uploader',
     'username avatarUrl'
   );
   if (!video) throw new ApiError(404, 'Video not found');
+  assertViewable(video, req.userId);
 
   const subscriberCount = await Subscription.countDocuments({ channel: video.uploader._id });
   const isSubscribed = req.userId
@@ -198,6 +221,12 @@ export const incrementView = asyncHandler(async (req, res) => {
 export const streamVideo = asyncHandler(async (req, res) => {
   const video = await Video.findById(req.params.id);
   if (!video) throw new ApiError(404, 'Video not found');
+  // No visibility check here (unlike getVideo) — native <video>/<track>
+  // elements can't attach an Authorization header, so the owner themselves
+  // couldn't play their own private video if this enforced it. The metadata
+  // endpoint already keeps a private video from ever being discovered or
+  // rendered by a non-owner; this raw stream URL is only ever reachable via
+  // that page, same "unguessable id" model thumbnails already relied on.
   if (video.source !== 'upload') {
     throw new ApiError(400, 'This video is hosted on YouTube, not streamed locally');
   }
@@ -265,6 +294,8 @@ export const getThumbnail = asyncHandler(async (req, res) => {
   if (!video || !video.thumbnailFilename) {
     throw new ApiError(404, 'Thumbnail not found');
   }
+  // See streamVideo — no visibility check here; <img> can't send an auth
+  // header either, and the metadata endpoint already gates discovery.
 
   if (video.storageProvider === 'r2') {
     const url = await getSignedFileUrl(video.thumbnailFilename);
@@ -275,6 +306,29 @@ export const getThumbnail = asyncHandler(async (req, res) => {
   if (!fs.existsSync(filePath)) {
     throw new ApiError(404, 'Thumbnail file missing on disk');
   }
+  res.sendFile(filePath);
+});
+
+export const getCaption = asyncHandler(async (req, res) => {
+  const video = await Video.findById(req.params.id);
+  if (!video || !video.captionFilename) {
+    throw new ApiError(404, 'Caption not found');
+  }
+  // See streamVideo — no visibility check here; <track> can't send an auth
+  // header either, and the metadata endpoint already gates discovery.
+
+  if (video.storageProvider === 'r2') {
+    // Proxied (not redirected) — see getFileStream's comment for why.
+    res.type('text/vtt');
+    const stream = await getFileStream(video.captionFilename);
+    return pipeline(stream, res).catch(() => {});
+  }
+
+  const filePath = path.join(CAPTION_STORAGE_DIR, video.captionFilename);
+  if (!fs.existsSync(filePath)) {
+    throw new ApiError(404, 'Caption file missing on disk');
+  }
+  res.type('text/vtt');
   res.sendFile(filePath);
 });
 
@@ -289,6 +343,7 @@ export const updateVideo = asyncHandler(async (req, res) => {
   if (req.body.description !== undefined) video.description = req.body.description;
   if (req.body.category !== undefined) video.category = req.body.category;
   if (req.body.tags !== undefined) video.tags = req.body.tags;
+  if (req.body.visibility !== undefined) video.visibility = req.body.visibility;
 
   if (req.body.collections !== undefined) {
     // Allow collections you own outright, or ones you've been granted
@@ -353,8 +408,42 @@ export const updateThumbnail = asyncHandler(async (req, res) => {
   res.json({ video });
 });
 
-// Removes the original file, thumbnail, and any transcoded variants for an
-// 'upload'-sourced video, from whichever storage each one actually lives in.
+// Replaces (or adds) the WebVTT caption track on an already-uploaded video.
+export const updateCaption = asyncHandler(async (req, res) => {
+  const video = await Video.findById(req.params.id);
+  if (!video) throw new ApiError(404, 'Video not found');
+  if (video.uploader.toString() !== req.userId) {
+    throw new ApiError(403, 'You do not own this video');
+  }
+  if (video.source !== 'upload') {
+    throw new ApiError(400, "YouTube-sourced videos use YouTube's own captions");
+  }
+  if (!req.file) {
+    throw new ApiError(400, 'A .vtt caption file is required');
+  }
+
+  const oldFilename = video.captionFilename;
+  const oldStorageProvider = video.storageProvider;
+
+  const storageProvider = await persistUploadedFile(req.file.path, req.file.filename, 'text/vtt');
+
+  video.captionFilename = req.file.filename;
+  if (storageProvider === 'r2') video.storageProvider = 'r2';
+  await video.save();
+
+  if (oldFilename) {
+    if (oldStorageProvider === 'r2') {
+      deleteFileFromCloud(oldFilename);
+    } else {
+      fs.unlink(path.join(CAPTION_STORAGE_DIR, oldFilename), () => {});
+    }
+  }
+
+  res.json({ video });
+});
+
+// Removes the original file, thumbnail, caption, and any transcoded variants
+// for an 'upload'-sourced video, from whichever storage each lives in.
 function deleteVideoFiles(video) {
   if (video.source !== 'upload') return;
 
@@ -369,6 +458,14 @@ function deleteVideoFiles(video) {
       deleteFileFromCloud(video.thumbnailFilename);
     } else {
       fs.unlink(path.join(THUMBNAIL_STORAGE_DIR, video.thumbnailFilename), () => {});
+    }
+  }
+
+  if (video.captionFilename) {
+    if (video.storageProvider === 'r2') {
+      deleteFileFromCloud(video.captionFilename);
+    } else {
+      fs.unlink(path.join(CAPTION_STORAGE_DIR, video.captionFilename), () => {});
     }
   }
 
@@ -463,6 +560,15 @@ export const toggleLike = asyncHandler(async (req, res) => {
   });
 
   res.json({ liked: !alreadyLiked, likesCount: updated.likesCount });
+
+  if (!alreadyLiked) {
+    createNotification({
+      recipient: updated.uploader,
+      type: 'like',
+      actor: req.userId,
+      video: updated._id,
+    });
+  }
 });
 
 // Notes are private per (video, user) — any authenticated viewer can keep
@@ -517,7 +623,7 @@ export const searchVideos = asyncHandler(async (req, res) => {
 export const suggestVideos = asyncHandler(async (req, res) => {
   const { q } = req.query;
   const videos = await Video.find(
-    { $text: { $search: q } },
+    { $text: { $search: q }, visibility: 'public' },
     { score: { $meta: 'textScore' }, title: 1, source: 1, thumbnailFilename: 1, youtubeThumbnailUrl: 1 }
   )
     .sort({ score: { $meta: 'textScore' } })
@@ -536,7 +642,7 @@ const RECOMMENDATION_CANDIDATE_POOL = 300;
 // for logged-out viewers or anyone without enough history yet.
 export const getRecommended = asyncHandler(async (req, res) => {
   if (!req.userId) {
-    const trending = await Video.find()
+    const trending = await Video.find({ visibility: 'public' })
       .sort({ views: -1 })
       .limit(RECOMMENDATION_LIMIT)
       .populate('uploader', 'username avatarUrl')
@@ -553,7 +659,7 @@ export const getRecommended = asyncHandler(async (req, res) => {
   const watchedIds = history.map((h) => h.video?._id).filter(Boolean);
 
   if (watchedIds.length === 0) {
-    const trending = await Video.find({ uploader: { $ne: req.userId } })
+    const trending = await Video.find({ uploader: { $ne: req.userId }, visibility: 'public' })
       .sort({ views: -1 })
       .limit(RECOMMENDATION_LIMIT)
       .populate('uploader', 'username avatarUrl')
@@ -574,6 +680,7 @@ export const getRecommended = asyncHandler(async (req, res) => {
   const candidates = await Video.find({
     _id: { $nin: watchedIds },
     uploader: { $ne: req.userId },
+    visibility: 'public',
   })
     .sort({ createdAt: -1 })
     .limit(RECOMMENDATION_CANDIDATE_POOL)

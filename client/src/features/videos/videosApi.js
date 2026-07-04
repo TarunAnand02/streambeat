@@ -46,7 +46,7 @@ export async function fetchRecommended() {
 }
 
 export async function uploadVideo(
-  { title, description, category, durationSeconds, videoFile, thumbnailFile },
+  { title, description, category, durationSeconds, videoFile, thumbnailFile, visibility },
   onUploadProgress,
   signal
 ) {
@@ -54,6 +54,7 @@ export async function uploadVideo(
   form.append('title', title);
   form.append('description', description || '');
   form.append('category', category || 'other');
+  form.append('visibility', visibility || 'public');
   if (durationSeconds) form.append('durationSeconds', durationSeconds);
   form.append('video', videoFile);
   if (thumbnailFile) form.append('thumbnail', thumbnailFile);
@@ -75,6 +76,15 @@ export async function updateThumbnail(id, thumbnailFile) {
   const form = new FormData();
   form.append('thumbnail', thumbnailFile);
   const { data } = await axiosClient.patch(`/videos/${id}/thumbnail`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.video;
+}
+
+export async function updateCaption(id, captionFile) {
+  const form = new FormData();
+  form.append('caption', captionFile);
+  const { data } = await axiosClient.patch(`/videos/${id}/caption`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data.video;
@@ -147,4 +157,8 @@ export function streamUrl(id, resolution) {
 
 export function thumbnailUrl(id) {
   return `${baseURL}/videos/${id}/thumbnail`;
+}
+
+export function captionUrl(id) {
+  return `${baseURL}/videos/${id}/caption`;
 }

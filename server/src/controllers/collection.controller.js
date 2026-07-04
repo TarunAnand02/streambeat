@@ -13,11 +13,22 @@ function roleFor(collection, userId) {
   return collaborator?.role || null;
 }
 
+// A parent must be one of the requester's own collections — folders can't
+// span across owners.
+async function assertOwnedParent(parentId, userId) {
+  if (!parentId) return;
+  const parent = await Collection.findOne({ _id: parentId, owner: userId });
+  if (!parent) throw new ApiError(400, 'That parent folder is not accessible to you');
+}
+
 export const createCollection = asyncHandler(async (req, res) => {
+  await assertOwnedParent(req.body.parent, req.userId);
+
   const collection = await Collection.create({
     name: req.body.name,
     description: req.body.description || '',
     owner: req.userId,
+    parent: req.body.parent || null,
   });
   res.status(201).json({ collection });
 });
@@ -40,10 +51,9 @@ export const listCollections = asyncHandler(async (req, res) => {
 });
 
 export const getCollection = asyncHandler(async (req, res) => {
-  const collection = await Collection.findById(req.params.id).populate(
-    'collaborators.user',
-    'username avatarUrl'
-  );
+  const collection = await Collection.findById(req.params.id)
+    .populate('collaborators.user', 'username avatarUrl')
+    .populate('parent', 'name');
   if (!collection) throw new ApiError(404, 'Collection not found');
   const role = roleFor(collection, req.userId);
   if (!role) throw new ApiError(403, 'You do not have access to this collection');
@@ -59,7 +69,16 @@ export const getCollection = asyncHandler(async (req, res) => {
     return ai - bi;
   });
 
-  res.json({ collection, videos, role });
+  // Subfolders — only the owner's own children are meaningful to show here
+  // (a collaborator only has access to this one collection, not its tree).
+  const subfolders =
+    role === 'owner'
+      ? await Collection.find({ parent: collection._id, owner: req.userId })
+          .sort({ name: 1 })
+          .lean()
+      : [];
+
+  res.json({ collection, videos, role, subfolders });
 });
 
 export const reorderCollection = asyncHandler(async (req, res) => {
@@ -93,6 +112,28 @@ export const updateCollection = asyncHandler(async (req, res) => {
 
   if (req.body.name !== undefined) collection.name = req.body.name;
   if (req.body.description !== undefined) collection.description = req.body.description;
+
+  if (req.body.parent !== undefined) {
+    const newParentId = req.body.parent;
+    if (newParentId) {
+      if (newParentId === collection._id.toString()) {
+        throw new ApiError(400, "A folder can't be its own parent");
+      }
+      await assertOwnedParent(newParentId, req.userId);
+
+      // Walk up from the proposed parent to make sure `collection` isn't
+      // one of its own ancestors — otherwise this move would create a loop.
+      let cursor = await Collection.findById(newParentId).select('parent');
+      while (cursor?.parent) {
+        if (cursor.parent.toString() === collection._id.toString()) {
+          throw new ApiError(400, "Can't move a folder inside its own subfolder");
+        }
+        cursor = await Collection.findById(cursor.parent).select('parent');
+      }
+    }
+    collection.parent = newParentId || null;
+  }
+
   await collection.save();
 
   res.json({ collection });
@@ -151,6 +192,9 @@ export const deleteCollection = asyncHandler(async (req, res) => {
     { collections: collection._id },
     { $pull: { collections: collection._id } }
   );
+  // Reparent any subfolders up a level rather than deleting them too —
+  // consistent with how deleting a collection never deletes its videos.
+  await Collection.updateMany({ parent: collection._id }, { parent: collection.parent });
   await collection.deleteOne();
 
   res.status(204).send();

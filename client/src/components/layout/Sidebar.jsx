@@ -10,6 +10,7 @@ import {
   HelpIcon,
   HomeIcon,
   ImportIcon,
+  SettingsIcon,
   UploadIcon,
 } from '../ui/Icon';
 import styles from './Sidebar.module.css';
@@ -107,6 +108,20 @@ export default function Sidebar({ isOpen, onClose }) {
       </div>
 
       <div className={styles.spacer} />
+
+      {isAuthenticated && (
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+          }
+        >
+          <span className={styles.icon}>
+            <SettingsIcon />
+          </span>
+          Settings
+        </NavLink>
+      )}
 
       <NavLink
         to="/help"

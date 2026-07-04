@@ -5,16 +5,22 @@ import { BrowserRouter } from 'react-router-dom';
 import { store } from './app/store';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import { ToastProvider } from './components/toast/ToastProvider.jsx';
+import { ThemeProvider } from './hooks/useTheme.jsx';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <Provider store={store}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </Provider>
+      <ThemeProvider>
+        <Provider store={store}>
+          <BrowserRouter>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </BrowserRouter>
+        </Provider>
+      </ThemeProvider>
     </ErrorBoundary>
   </StrictMode>
 );

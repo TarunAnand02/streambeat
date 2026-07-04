@@ -3,6 +3,7 @@ import { User } from '../models/User.js';
 import { Video } from '../models/Video.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { createNotification } from './notification.controller.js';
 
 export const subscribe = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
@@ -17,6 +18,8 @@ export const subscribe = asyncHandler(async (req, res) => {
     { subscriber: req.userId, channel: channelId },
     { upsert: true }
   );
+
+  createNotification({ recipient: channelId, type: 'subscribe', actor: req.userId });
 
   res.status(201).json({ subscribed: true });
 });
@@ -53,7 +56,7 @@ export const getFeed = asyncHandler(async (req, res) => {
     return res.json({ videos: [], page, hasMore: false });
   }
 
-  const videos = await Video.find({ uploader: { $in: channelIds } })
+  const videos = await Video.find({ uploader: { $in: channelIds }, visibility: 'public' })
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit + 1)

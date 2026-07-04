@@ -10,8 +10,8 @@ export async function fetchCollection(id) {
   return data;
 }
 
-export async function createCollection({ name, description }) {
-  const { data } = await axiosClient.post('/collections', { name, description });
+export async function createCollection({ name, description, parent }) {
+  const { data } = await axiosClient.post('/collections', { name, description, parent: parent || undefined });
   return data.collection;
 }
 

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Chapters from '../../components/Chapters';
+import { playVideo, setPlaying, updateProgress } from '../player/playerSlice';
 import Spinner from '../../components/ui/Spinner';
-import { ThumbsUpIcon } from '../../components/ui/Icon';
+import { TheaterIcon, ThumbsUpIcon } from '../../components/ui/Icon';
+import { useToast } from '../../components/toast/ToastProvider';
+import SaveToCollectionMenu from '../collections/SaveToCollectionMenu';
 import YoutubeEmbed from '../../components/YoutubeEmbed';
 import { useAuth } from '../../hooks/useAuth';
 import { formatViews, timeAgo } from '../../lib/formatDuration';
@@ -15,6 +19,7 @@ import NotesPanel from './NotesPanel';
 import PlaylistPanel from './PlaylistPanel';
 import VideoEditPanel from './VideoEditPanel';
 import {
+  captionUrl,
   deleteVideo,
   fetchVideo,
   registerView,
@@ -27,16 +32,23 @@ export default function WatchPage() {
   const { videoId } = useParams();
   const navigate = useNavigate();
   const { user, initialized } = useAuth();
+  const showToast = useToast();
+  const dispatch = useDispatch();
+  const playerCurrentVideo = useSelector((state) => state.player.currentVideo);
+  const playerCurrentTime = useSelector((state) => state.player.currentTime);
   const [searchParams] = useSearchParams();
   const playlistId = searchParams.get('playlist');
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [playlist, setPlaylist] = useState(null);
   const [resolution, setResolution] = useState('auto');
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [subBusy, setSubBusy] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [theaterMode, setTheaterMode] = useState(false);
   const videoRef = useRef(null);
   const youtubeRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -44,11 +56,21 @@ export default function WatchPage() {
 
   useEffect(() => {
     setResolution('auto');
+    setPlaybackRate(1);
   }, [videoId]);
 
   function handleResolutionChange(newRes) {
     resumeTimeRef.current = videoRef.current?.currentTime || 0;
     setResolution(newRes);
+  }
+
+  function handleSpeedChange(rate) {
+    setPlaybackRate(rate);
+    if (video?.source === 'youtube') {
+      youtubeRef.current?.setPlaybackRate(rate);
+    } else if (videoRef.current) {
+      videoRef.current.playbackRate = rate;
+    }
   }
 
   useEffect(() => {
@@ -88,14 +110,36 @@ export default function WatchPage() {
     if (!initialized) return;
     let cancelled = false;
     setLoading(true);
-    fetchVideo(videoId).then((data) => {
-      if (cancelled) return;
-      setVideo(data);
-      setLikesCount(data.likesCount);
-      setLiked(user ? data.likes?.includes(user.id) : false);
-      registerView(videoId).catch(() => {});
-      setLoading(false);
-    });
+    setNotFound(false);
+    fetchVideo(videoId)
+      .then((data) => {
+        if (cancelled) return;
+        setVideo(data);
+        setLikesCount(data.likesCount);
+        setLiked(user ? data.likes?.includes(user.id) : false);
+        registerView(videoId).catch(() => {});
+        setLoading(false);
+        if (data.source === 'upload') {
+          // Resuming the same video the mini-player was already tracking
+          // (e.g. the user clicked back into it) — pick up from its saved
+          // position instead of restarting from 0.
+          if (playerCurrentVideo?.id === data._id) {
+            resumeTimeRef.current = playerCurrentTime;
+          }
+          dispatch(
+            playVideo({
+              id: data._id,
+              title: data.title,
+              uploaderName: data.uploader?.username,
+            })
+          );
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setNotFound(true);
+        setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -143,6 +187,7 @@ export default function WatchPage() {
   async function handleDelete() {
     if (!window.confirm('Delete this video? This cannot be undone.')) return;
     await deleteVideo(videoId);
+    showToast('Video deleted', { type: 'success' });
     navigate(`/channel/${user.id}`);
   }
 
@@ -206,6 +251,9 @@ export default function WatchPage() {
           if (document.fullscreenElement) document.exitFullscreen();
           else wrapperRef.current?.requestFullscreen?.();
           break;
+        case 't':
+          setTheaterMode((v) => !v);
+          break;
         default:
           break;
       }
@@ -215,13 +263,22 @@ export default function WatchPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [video, seekTo, getCurrentTime]);
 
+  if (notFound) {
+    return (
+      <div className={styles.notFound}>
+        <h1>Video not found</h1>
+        <p>This video doesn't exist, was removed, or is private.</p>
+      </div>
+    );
+  }
+
   if (loading || !video) return <Spinner />;
 
   const isOwner = user && video.uploader?._id === user.id;
   const chapters = parseChapters(video.description);
 
   return (
-    <div className={styles.page}>
+    <div className={theaterMode ? `${styles.page} ${styles.theaterActive}` : styles.page}>
       {video.source === 'youtube' ? (
         <div className={styles.embedWrapper} ref={wrapperRef}>
           <YoutubeEmbed
@@ -248,32 +305,59 @@ export default function WatchPage() {
                 videoRef.current.currentTime = resumeTimeRef.current;
                 resumeTimeRef.current = 0;
               }
+              videoRef.current.playbackRate = playbackRate;
             }}
-          />
+            onTimeUpdate={(e) => dispatch(updateProgress(e.currentTarget.currentTime))}
+            onPlay={() => dispatch(setPlaying(true))}
+            onPause={() => dispatch(setPlaying(false))}
+          >
+            {video.captionFilename && (
+              <track kind="subtitles" src={captionUrl(video._id)} srcLang="en" label="English" default />
+            )}
+          </video>
         </div>
       )}
 
-      {video.source === 'upload' && (video.variants?.length > 0 || video.transcodeStatus === 'processing') && (
-        <div className={styles.resolutionRow}>
-          {video.variants?.length > 0 && (
-            <select
-              className={styles.resolutionSelect}
-              value={resolution}
-              onChange={(e) => handleResolutionChange(e.target.value)}
-            >
-              <option value="auto">Auto (Source)</option>
-              {video.variants.map((v) => (
-                <option key={v.resolution} value={v.resolution}>
-                  {v.resolution}
-                </option>
-              ))}
-            </select>
-          )}
-          {video.transcodeStatus === 'processing' && (
-            <span className={styles.transcodeStatus}>Processing other qualities…</span>
-          )}
-        </div>
-      )}
+      <div className={styles.resolutionRow}>
+        {video.source === 'upload' && video.variants?.length > 0 && (
+          <select
+            className={styles.resolutionSelect}
+            value={resolution}
+            onChange={(e) => handleResolutionChange(e.target.value)}
+          >
+            <option value="auto">Auto (Source)</option>
+            {video.variants.map((v) => (
+              <option key={v.resolution} value={v.resolution}>
+                {v.resolution}
+              </option>
+            ))}
+          </select>
+        )}
+        <select
+          className={styles.resolutionSelect}
+          value={playbackRate}
+          onChange={(e) => handleSpeedChange(Number(e.target.value))}
+          aria-label="Playback speed"
+        >
+          {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
+            <option key={rate} value={rate}>
+              {rate === 1 ? 'Normal' : `${rate}x`}
+            </option>
+          ))}
+        </select>
+        {video.source === 'upload' && video.transcodeStatus === 'processing' && (
+          <span className={styles.transcodeStatus}>Processing other qualities…</span>
+        )}
+        <button
+          type="button"
+          className={theaterMode ? `${styles.theaterButton} ${styles.theaterButtonActive}` : styles.theaterButton}
+          onClick={() => setTheaterMode((v) => !v)}
+          title="Theater mode (t)"
+          aria-label="Toggle theater mode"
+        >
+          <TheaterIcon />
+        </button>
+      </div>
 
       {playlist && (
         <PlaylistPanel
@@ -312,6 +396,7 @@ export default function WatchPage() {
             <ThumbsUpIcon className={styles.likeIcon} />
             {likesCount}
           </button>
+          {isOwner && <SaveToCollectionMenu video={video} onUpdated={setVideo} variant="labeled" />}
           {isOwner && (
             <button className={styles.deleteButton} onClick={handleDelete}>
               Delete

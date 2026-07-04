@@ -1,0 +1,246 @@
+.page {
+  max-width: 560px;
+}
+
+.heading {
+  font-size: 22px;
+  margin-bottom: 20px;
+}
+
+.section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionHeading {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.input,
+.textarea {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.success {
+  color: var(--color-success, #22c55e);
+  font-size: 13px;
+}
+
+.submit {
+  align-self: flex-start;
+  padding: 10px 22px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.submit:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.submit:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.themeOptions {
+  display: flex;
+  gap: 10px;
+}
+
+.themeOption {
+  padding: 8px 20px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.themeOption:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-subtle);
+}
+
+.themeOptionActive {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #000;
+}
+
+.themeOptionActive:hover {
+  color: #000;
+}
+
+.qrCode {
+  display: block;
+  width: 180px;
+  height: 180px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 8px;
+  margin-bottom: 12px;
+}
+
+.backupCodeList {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  font-family: monospace;
+  font-size: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dangerButton {
+  align-self: flex-start;
+  padding: 10px 22px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-danger);
+  background: none;
+  color: var(--color-danger);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.dangerButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelLink {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.cancelLink:hover {
+  color: var(--color-text);
+}
+
+.sessionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sessionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+}
+
+.sessionDevice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sessionBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #000;
+  background: var(--color-accent);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.sessionMeta {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  margin-top: 2px;
+}

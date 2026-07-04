@@ -29,6 +29,21 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+// Second step of login when the account has 2FA enabled — loginUser above
+// returns { requires2FA: true, tempToken } instead of real tokens in that
+// case, and this thunk exchanges a TOTP/backup code for the real session.
+export const verifyTwoFactorLogin = createAsyncThunk(
+  'auth/verifyTwoFactorLogin',
+  async ({ tempToken, code }, { rejectWithValue }) => {
+    try {
+      const { data } = await axiosClient.post('/auth/2fa/verify-login', { tempToken, code });
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Invalid authentication code');
+    }
+  }
+);
+
 // Attempts to silently re-establish a session from the httpOnly refresh
 // cookie on app boot (e.g. after a page reload). Failure is expected/normal
 // when the user was never logged in, so it does not surface as an error.
@@ -57,6 +72,12 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
     },
+    // Updates the profile fields on the already-logged-in user without
+    // touching the access token — for use after a profile edit, where no new
+    // token is issued (unlike login/change-password).
+    updateUser(state, action) {
+      state.user = action.payload;
+    },
     clearCredentials(state) {
       state.user = null;
       state.accessToken = null;
@@ -81,10 +102,28 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        // A 2FA-enabled account gets { requires2FA, tempToken } here instead
+        // of real tokens — leave user/accessToken untouched until the
+        // second step (verifyTwoFactorLogin) actually completes.
+        if (!action.payload.requires2FA) {
+          state.user = action.payload.user;
+          state.accessToken = action.payload.accessToken;
+        }
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+      })
+      .addCase(verifyTwoFactorLogin.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(verifyTwoFactorLogin.fulfilled, (state, action) => {
+        state.status = 'succeeded';
         state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
       })
-      .addCase(loginUser.rejected, (state, action) => {
+      .addCase(verifyTwoFactorLogin.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
       })
@@ -105,5 +144,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, clearCredentials } = authSlice.actions;
+export const { setCredentials, clearCredentials, updateUser } = authSlice.actions;
 export default authSlice.reducer;

@@ -22,6 +22,14 @@ const collectionSchema = new Schema(
       required: true,
       index: true,
     },
+    // Optional parent collection, for organizing collections into folders.
+    // Only ever set to another collection owned by the same user.
+    parent: {
+      type: Schema.Types.ObjectId,
+      ref: 'Collection',
+      default: null,
+      index: true,
+    },
     collaborators: [
       {
         _id: false,

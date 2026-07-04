@@ -31,3 +31,16 @@ export async function sendPasswordResetEmail(to, resetUrl) {
   });
   return true;
 }
+
+export async function sendVerificationEmail(to, verifyUrl) {
+  if (!isMailerConfigured()) return false;
+
+  await getTransporter().sendMail({
+    from: env.smtp.from,
+    to,
+    subject: 'Verify your StreamBeat email address',
+    text: `Welcome to StreamBeat! Verify your email here (valid for 24 hours): ${verifyUrl}\n\nIf you didn't create this account, you can safely ignore this email.`,
+    html: `<p>Welcome to StreamBeat!</p><p><a href="${verifyUrl}">Verify your email address</a> (valid for 24 hours).</p><p>If you didn't create this account, you can safely ignore this email.</p>`,
+  });
+  return true;
+}

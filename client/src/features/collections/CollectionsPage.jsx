@@ -11,6 +11,7 @@ export default function CollectionsPage() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [parent, setParent] = useState('');
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
@@ -33,10 +34,11 @@ export default function CollectionsPage() {
     setError(null);
     setCreating(true);
     try {
-      const collection = await createCollection({ name, description });
+      const collection = await createCollection({ name, description, parent: parent || undefined });
       setCollections((prev) => [{ ...collection, videoCount: 0, role: 'owner' }, ...prev]);
       setName('');
       setDescription('');
+      setParent('');
       setShowForm(false);
     } catch (err) {
       setError(err.response?.data?.message || 'Could not create collection');
@@ -49,6 +51,7 @@ export default function CollectionsPage() {
 
   const owned = collections.filter((c) => c.role === 'owner');
   const shared = collections.filter((c) => c.role !== 'owner');
+  const nameById = new Map(owned.map((c) => [c._id, c.name]));
 
   function renderGrid(list) {
     return (
@@ -64,6 +67,9 @@ export default function CollectionsPage() {
               {collection.videoCount} video{collection.videoCount === 1 ? '' : 's'}
               {collection.role !== 'owner' && ` · ${collection.role}`}
             </div>
+            {collection.parent && nameById.has(collection.parent) && (
+              <div className={styles.cardParent}>in {nameById.get(collection.parent)}</div>
+            )}
           </button>
         ))}
       </div>
@@ -107,6 +113,26 @@ export default function CollectionsPage() {
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
+          {owned.length > 0 && (
+            <div className={uploadStyles.field}>
+              <label className={uploadStyles.label} htmlFor="parent">
+                Parent folder (optional)
+              </label>
+              <select
+                id="parent"
+                className={uploadStyles.input}
+                value={parent}
+                onChange={(e) => setParent(e.target.value)}
+              >
+                <option value="">None — top level</option>
+                {owned.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <button className={uploadStyles.submit} type="submit" disabled={creating}>
             {creating ? 'Creating…' : 'Create'}
           </button>

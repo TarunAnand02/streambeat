@@ -1,5 +1,25 @@
 import { axiosClient } from '../../lib/axiosClient';
 
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+export async function fetchOAuthConfig() {
+  const { data } = await axiosClient.get('/auth/oauth-config');
+  return data;
+}
+
+export function googleLoginUrl() {
+  return `${baseURL}/auth/google`;
+}
+
+export function githubLoginUrl() {
+  return `${baseURL}/auth/github`;
+}
+
+export async function fetchMe() {
+  const { data } = await axiosClient.get('/users/me');
+  return data.user;
+}
+
 export async function forgotPassword(email) {
   const { data } = await axiosClient.post('/auth/forgot-password', { email });
   return data;
@@ -7,4 +27,13 @@ export async function forgotPassword(email) {
 
 export async function resetPassword(token, password) {
   await axiosClient.post('/auth/reset-password', { token, password });
+}
+
+export async function verifyEmail(token) {
+  await axiosClient.post('/auth/verify-email', { token });
+}
+
+export async function resendVerification() {
+  const { data } = await axiosClient.post('/auth/resend-verification');
+  return data;
 }

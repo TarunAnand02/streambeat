@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '../../features/auth/authSlice';
 import { useAuth } from '../../hooks/useAuth';
+import NotificationsMenu from '../../features/notifications/NotificationsMenu';
 import { suggestVideos, thumbnailUrl } from '../../features/videos/videosApi';
 import { MenuIcon } from '../ui/Icon';
 import styles from './Topbar.module.css';
@@ -120,6 +121,7 @@ export default function Topbar({ onMenuClick }) {
       </div>
 
       <div className={styles.actions}>
+        {isAuthenticated && <NotificationsMenu />}
         {isAuthenticated ? (
           <div className={styles.menuWrapper} ref={menuRef}>
             <button className={styles.avatar} onClick={() => setMenuOpen((v) => !v)}>

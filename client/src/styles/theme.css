@@ -10,6 +10,7 @@
   --color-text-muted: #b3b3b3;
   --color-text-subtle: #6a6a6a;
   --color-danger: #f15e6c;
+  --color-bg-translucent: rgba(18, 18, 18, 0.9);
 
   --sidebar-width: 240px;
   --topbar-height: 64px;
@@ -24,6 +25,42 @@
   --duration-fast: 150ms;
   --duration-base: 200ms;
   --duration-slow: 300ms;
+}
+
+/* Explicit light theme (chosen via Settings) — mirrors every dark-theme
+   variable above so components never need their own light/dark branching. */
+:root[data-theme='light'] {
+  --color-bg: #ffffff;
+  --color-surface: #f5f5f5;
+  --color-surface-raised: #e9e9e9;
+  --color-surface-hover: #dcdcdc;
+  --color-border: #dedede;
+  --color-accent: #1db954;
+  --color-accent-hover: #169c46;
+  --color-text: #121212;
+  --color-text-muted: #5f5f5f;
+  --color-text-subtle: #8a8a8a;
+  --color-danger: #d92d3d;
+  --color-bg-translucent: rgba(255, 255, 255, 0.9);
+}
+
+/* "System" preference (no explicit choice saved) — follow the OS, unless
+   the user has explicitly forced dark mode. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --color-bg: #ffffff;
+    --color-surface: #f5f5f5;
+    --color-surface-raised: #e9e9e9;
+    --color-surface-hover: #dcdcdc;
+    --color-border: #dedede;
+    --color-accent: #1db954;
+    --color-accent-hover: #169c46;
+    --color-text: #121212;
+    --color-text-muted: #5f5f5f;
+    --color-text-subtle: #8a8a8a;
+    --color-danger: #d92d3d;
+    --color-bg-translucent: rgba(255, 255, 255, 0.9);
+  }
 }
 
 * {

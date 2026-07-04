@@ -1,0 +1,42 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 60vh;
+  padding: 40px 20px;
+}
+
+.code {
+  font-size: 88px;
+  font-weight: 800;
+  color: var(--color-accent);
+  line-height: 1;
+}
+
+.heading {
+  font-size: 22px;
+  margin: 16px 0 8px;
+}
+
+.text {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+.homeLink {
+  padding: 10px 24px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  transition: filter 0.15s ease;
+}
+
+.homeLink:hover {
+  filter: brightness(1.1);
+}

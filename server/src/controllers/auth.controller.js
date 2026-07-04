@@ -1,24 +1,57 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import QRCode from 'qrcode';
 import { env } from '../config/env.js';
+import { Session } from '../models/Session.js';
 import { User } from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { isMailerConfigured, sendPasswordResetEmail } from '../utils/mailer.js';
+import { isMailerConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../utils/mailer.js';
 import {
   REFRESH_COOKIE_NAME,
   refreshCookieOptions,
+  sign2faPendingToken,
   signAccessToken,
   signRefreshToken,
+  verify2faPendingToken,
   verifyRefreshToken,
 } from '../utils/tokens.js';
+import {
+  generateBackupCodes,
+  generateOtpAuthUrl,
+  generateSecret,
+  hashBackupCode,
+  verifyTotp,
+} from '../utils/twoFactor.js';
 
 const SALT_ROUNDS = 12;
 const RESET_TOKEN_BYTES = 32;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+const VERIFY_TOKEN_BYTES = 32;
+const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function hashResetToken(rawToken) {
   return crypto.createHash('sha256').update(rawToken).digest('hex');
+}
+
+// Issues a fresh access+refresh token pair, records a Session row for the
+// new refresh token's jti (so it shows up in Settings > Sessions), and sets
+// the refresh cookie. Shared by every place that establishes a session
+// (login, 2FA verify, change-password).
+export async function issueSession(req, res, user) {
+  const jti = crypto.randomUUID();
+  const accessToken = signAccessToken(user._id.toString());
+  const refreshToken = signRefreshToken(user._id.toString(), user.refreshTokenVersion, jti);
+
+  await Session.create({
+    user: user._id,
+    jti,
+    userAgent: req.headers['user-agent'] || '',
+    ip: req.ip || '',
+  });
+
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
+  return accessToken;
 }
 
 function toPublicUser(user) {
@@ -29,7 +62,32 @@ function toPublicUser(user) {
     avatarUrl: user.avatarUrl,
     bio: user.bio,
     isAdmin: user.isAdmin,
+    emailVerified: user.emailVerified,
+    twoFactorEnabled: user.twoFactorEnabled,
   };
+}
+
+// Generates + saves the token (fast, must complete before the HTTP response
+// so the link is valid the instant it's returned), but does NOT wait on the
+// actual SMTP send — a real round-trip to Gmail can take several seconds,
+// and callers (register, resend-verification) shouldn't block on that.
+async function sendVerificationFor(user) {
+  const rawToken = crypto.randomBytes(VERIFY_TOKEN_BYTES).toString('hex');
+  user.emailVerifyTokenHash = hashResetToken(rawToken);
+  user.emailVerifyExpires = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
+  await user.save();
+
+  const verifyUrl = `${env.clientOrigin}/verify-email?token=${rawToken}`;
+  if (isMailerConfigured()) {
+    sendVerificationEmail(user.email, verifyUrl).catch(() => {
+      // eslint-disable-next-line no-console
+      console.log(`[verify-email] send failed, link still valid: ${user.email} -> ${verifyUrl}`);
+    });
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(`[verify-email] ${user.email} -> ${verifyUrl}`);
+  }
+  return { verifyUrl };
 }
 
 export const register = asyncHandler(async (req, res) => {
@@ -43,7 +101,46 @@ export const register = asyncHandler(async (req, res) => {
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   const user = await User.create({ username, email, passwordHash });
 
-  res.status(201).json({ user: toPublicUser(user) });
+  const { verifyUrl } = await sendVerificationFor(user);
+
+  res.status(201).json({
+    user: toPublicUser(user),
+    ...(env.isProd ? {} : { devVerifyUrl: verifyUrl }),
+  });
+});
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  const tokenHash = hashResetToken(token);
+
+  const user = await User.findOne({
+    emailVerifyTokenHash: tokenHash,
+    emailVerifyExpires: { $gt: new Date() },
+  });
+  if (!user) {
+    throw new ApiError(400, 'That verification link is invalid or has expired');
+  }
+
+  user.emailVerified = true;
+  user.emailVerifyTokenHash = null;
+  user.emailVerifyExpires = null;
+  await user.save();
+
+  res.status(204).send();
+});
+
+export const resendVerification = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.userId);
+  if (!user) throw new ApiError(404, 'User not found');
+  if (user.emailVerified) {
+    throw new ApiError(400, 'Your email is already verified');
+  }
+
+  const { verifyUrl } = await sendVerificationFor(user);
+  res.json({
+    message: 'Verification email sent.',
+    ...(env.isProd ? {} : { devVerifyUrl: verifyUrl }),
+  });
 });
 
 export const login = asyncHandler(async (req, res) => {
@@ -59,14 +156,109 @@ export const login = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid email or password');
   }
 
-  const accessToken = signAccessToken(user._id.toString());
-  const refreshToken = signRefreshToken(
-    user._id.toString(),
-    user.refreshTokenVersion
-  );
+  if (user.twoFactorEnabled) {
+    // Password alone is confirmed correct, but no session is issued yet —
+    // the client must call /2fa/verify-login with this token plus a TOTP or
+    // backup code before it gets real tokens.
+    return res.json({ requires2FA: true, tempToken: sign2faPendingToken(user._id.toString()) });
+  }
 
-  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
+  const accessToken = await issueSession(req, res, user);
   res.json({ user: toPublicUser(user), accessToken });
+});
+
+export const verifyLogin2fa = asyncHandler(async (req, res) => {
+  const { tempToken, code } = req.body;
+
+  let payload;
+  try {
+    payload = verify2faPendingToken(tempToken);
+  } catch {
+    throw new ApiError(401, 'That login attempt has expired — please log in again');
+  }
+
+  const user = await User.findById(payload.sub).select('+twoFactorSecret +twoFactorBackupCodeHashes');
+  if (!user || !user.twoFactorEnabled) {
+    throw new ApiError(401, 'That login attempt has expired — please log in again');
+  }
+
+  const normalizedCode = code.trim();
+  let usedBackupCode = false;
+
+  let valid = await verifyTotp(normalizedCode, user.twoFactorSecret);
+  if (!valid) {
+    const codeHash = hashBackupCode(normalizedCode);
+    const index = user.twoFactorBackupCodeHashes.indexOf(codeHash);
+    if (index !== -1) {
+      valid = true;
+      usedBackupCode = true;
+      user.twoFactorBackupCodeHashes.splice(index, 1);
+    }
+  }
+
+  if (!valid) {
+    throw new ApiError(401, 'Invalid authentication code');
+  }
+
+  if (usedBackupCode) await user.save();
+
+  const accessToken = await issueSession(req, res, user);
+  res.json({ user: toPublicUser(user), accessToken });
+});
+
+// Generates (or regenerates) a pending TOTP secret for the logged-in user.
+// twoFactorEnabled stays false until confirmed via enable2fa — so scanning
+// the QR code alone never activates 2FA on its own.
+export const setup2fa = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.userId);
+  if (!user) throw new ApiError(404, 'User not found');
+  if (user.twoFactorEnabled) throw new ApiError(400, 'Two-factor authentication is already enabled');
+
+  const secret = generateSecret();
+  user.twoFactorSecret = secret;
+  await user.save();
+
+  const otpauthUrl = generateOtpAuthUrl(user.email, secret);
+  const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
+
+  res.json({ secret, qrCodeDataUrl });
+});
+
+export const enable2fa = asyncHandler(async (req, res) => {
+  const { code } = req.body;
+  const user = await User.findById(req.userId).select('+twoFactorSecret');
+  if (!user) throw new ApiError(404, 'User not found');
+  if (user.twoFactorEnabled) throw new ApiError(400, 'Two-factor authentication is already enabled');
+  if (!user.twoFactorSecret) throw new ApiError(400, 'Call setup first to get a code to scan');
+
+  if (!(await verifyTotp(code.trim(), user.twoFactorSecret))) {
+    throw new ApiError(400, 'Invalid authentication code');
+  }
+
+  const backupCodes = generateBackupCodes();
+  user.twoFactorEnabled = true;
+  user.twoFactorBackupCodeHashes = backupCodes.map(hashBackupCode);
+  await user.save();
+
+  // Backup codes are only ever shown this one time — only their hashes are
+  // persisted, same principle as password reset tokens.
+  res.json({ backupCodes });
+});
+
+export const disable2fa = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  const user = await User.findById(req.userId).select('+passwordHash');
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) throw new ApiError(401, 'Incorrect password');
+
+  user.twoFactorEnabled = false;
+  user.twoFactorSecret = null;
+  user.twoFactorBackupCodeHashes = [];
+  await user.save();
+
+  res.status(204).send();
 });
 
 export const refresh = asyncHandler(async (req, res) => {
@@ -87,24 +279,78 @@ export const refresh = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Refresh token has been revoked');
   }
 
+  // The session must still exist (not individually revoked from Settings).
+  const session = payload.jti ? await Session.findOne({ jti: payload.jti, user: user._id }) : null;
+  if (payload.jti && !session) {
+    throw new ApiError(401, 'This session has been signed out');
+  }
+
   const accessToken = signAccessToken(user._id.toString());
-  const newRefreshToken = signRefreshToken(
-    user._id.toString(),
-    user.refreshTokenVersion
-  );
+  // Rotate the jti in place on the same Session row, rather than creating a
+  // new one — a long-lived login refreshes many times but is still one
+  // session/device as far as the user is concerned.
+  const newJti = crypto.randomUUID();
+  const newRefreshToken = signRefreshToken(user._id.toString(), user.refreshTokenVersion, newJti);
+
+  if (session) {
+    session.jti = newJti;
+    session.lastUsedAt = new Date();
+    await session.save();
+  }
 
   res.cookie(REFRESH_COOKIE_NAME, newRefreshToken, refreshCookieOptions);
   res.json({ user: toPublicUser(user), accessToken });
 });
 
 export const logout = asyncHandler(async (req, res) => {
+  const token = req.cookies?.[REFRESH_COOKIE_NAME];
+  if (token) {
+    try {
+      const payload = verifyRefreshToken(token);
+      if (payload.jti) await Session.deleteOne({ jti: payload.jti });
+    } catch {
+      // an already-invalid token has nothing to clean up
+    }
+  }
   res.clearCookie(REFRESH_COOKIE_NAME, { path: refreshCookieOptions.path });
   res.status(204).send();
 });
 
 export const logoutAll = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(req.userId, { $inc: { refreshTokenVersion: 1 } });
+  await Session.deleteMany({ user: req.userId });
   res.clearCookie(REFRESH_COOKIE_NAME, { path: refreshCookieOptions.path });
+  res.status(204).send();
+});
+
+export const listSessions = asyncHandler(async (req, res) => {
+  const currentToken = req.cookies?.[REFRESH_COOKIE_NAME];
+  let currentJti = null;
+  if (currentToken) {
+    try {
+      currentJti = verifyRefreshToken(currentToken).jti;
+    } catch {
+      // ignore — just means nothing gets marked "this device"
+    }
+  }
+
+  const sessions = await Session.find({ user: req.userId }).sort({ lastUsedAt: -1 }).lean();
+  res.json({
+    sessions: sessions.map((s) => ({
+      id: s._id,
+      userAgent: s.userAgent,
+      ip: s.ip,
+      createdAt: s.createdAt,
+      lastUsedAt: s.lastUsedAt,
+      current: s.jti === currentJti,
+    })),
+  });
+});
+
+export const revokeSession = asyncHandler(async (req, res) => {
+  const session = await Session.findOne({ _id: req.params.id, user: req.userId });
+  if (!session) throw new ApiError(404, 'Session not found');
+  await session.deleteOne();
   res.status(204).send();
 });
 
@@ -167,6 +413,32 @@ export const resetPassword = asyncHandler(async (req, res) => {
   user.resetPasswordExpires = null;
   user.refreshTokenVersion += 1; // invalidate any existing sessions
   await user.save();
+  await Session.deleteMany({ user: user._id });
 
   res.status(204).send();
+});
+
+// Unlike resetPassword (forgotten-password recovery, where re-login is
+// expected), the user is already authenticated here — so instead of just
+// invalidating every session, immediately re-issue a fresh token pair for
+// *this* session while still bumping refreshTokenVersion to invalidate any
+// other outstanding sessions/devices.
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  const user = await User.findById(req.userId).select('+passwordHash');
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) throw new ApiError(401, 'Current password is incorrect');
+
+  user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  user.refreshTokenVersion += 1;
+  await user.save();
+  // Every session's version is now stale, including this one — delete them
+  // all and issue a brand new session for the device making this request.
+  await Session.deleteMany({ user: user._id });
+
+  const accessToken = await issueSession(req, res, user);
+  res.json({ user: toPublicUser(user), accessToken });
 });

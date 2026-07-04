@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Spinner from '../../components/ui/Spinner';
-import { ArrowDownIcon, ArrowUpIcon, CloseIcon, PlayIcon } from '../../components/ui/Icon';
+import { ArrowDownIcon, ArrowUpIcon, CloseIcon, FolderIcon, PlayIcon, PlusIcon } from '../../components/ui/Icon';
 import VideoCard from '../../components/VideoCard';
+import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../components/toast/ToastProvider';
+import { fetchChannel } from '../channel/channelApi';
+import { bulkVideoAction } from '../videos/videosApi';
 import {
   addCollaborator,
+  createCollection,
   deleteCollection,
   fetchCollection,
   removeCollaborator,
@@ -16,6 +21,8 @@ import styles from './CollectionDetailPage.module.css';
 export default function CollectionDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const showToast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingName, setEditingName] = useState(false);
@@ -25,6 +32,11 @@ export default function CollectionDetailPage() {
   const [collabRole, setCollabRole] = useState('viewer');
   const [collabError, setCollabError] = useState(null);
   const [addingCollab, setAddingCollab] = useState(false);
+  const [showAddPicker, setShowAddPicker] = useState(false);
+  const [myVideos, setMyVideos] = useState(null);
+  const [pickedIds, setPickedIds] = useState(() => new Set());
+  const [addBusy, setAddBusy] = useState(false);
+  const [addError, setAddError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +69,16 @@ export default function CollectionDetailPage() {
   async function handleDelete() {
     if (!window.confirm('Delete this collection? Videos in it will not be deleted.')) return;
     await deleteCollection(id);
+    showToast('Collection deleted', { type: 'success' });
     navigate('/collections');
+  }
+
+  async function handleCreateSubfolder() {
+    const subName = window.prompt('Subfolder name:');
+    if (!subName?.trim()) return;
+    const subfolder = await createCollection({ name: subName.trim(), parent: id });
+    setData((prev) => ({ ...prev, subfolders: [...(prev.subfolders || []), subfolder] }));
+    showToast(`Created "${subfolder.name}"`, { type: 'success' });
   }
 
   async function handleAddCollaborator(e) {
@@ -95,6 +116,45 @@ export default function CollectionDetailPage() {
     await reorderCollection(id, reordered.map((v) => v._id));
   }
 
+  async function openAddPicker() {
+    setShowAddPicker(true);
+    setAddError(null);
+    if (myVideos === null && user) {
+      const result = await fetchChannel(user.id);
+      setMyVideos(result.videos);
+    }
+  }
+
+  function togglePicked(videoId) {
+    setPickedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(videoId)) next.delete(videoId);
+      else next.add(videoId);
+      return next;
+    });
+  }
+
+  async function handleAddSelected() {
+    if (pickedIds.size === 0) return;
+    setAddBusy(true);
+    setAddError(null);
+    try {
+      await bulkVideoAction({
+        videoIds: [...pickedIds],
+        action: 'addToCollection',
+        collectionId: id,
+      });
+      const refreshed = await fetchCollection(id);
+      setData(refreshed);
+      setPickedIds(new Set());
+      setShowAddPicker(false);
+    } catch (err) {
+      setAddError(err.response?.data?.message || 'Could not add videos');
+    } finally {
+      setAddBusy(false);
+    }
+  }
+
   if (error) return <p className={styles.error}>{error}</p>;
   if (loading || !data) return <Spinner />;
 
@@ -103,6 +163,11 @@ export default function CollectionDetailPage() {
 
   return (
     <div>
+      {data.collection.parent && (
+        <Link className={styles.breadcrumb} to={`/collections/${data.collection.parent._id}`}>
+          ← {data.collection.parent.name}
+        </Link>
+      )}
       <div className={styles.header}>
         {editingName ? (
           <input
@@ -125,6 +190,20 @@ export default function CollectionDetailPage() {
               <PlayIcon className={styles.inlineIcon} /> Play all
             </Link>
           )}
+          {canEdit && (
+            <button
+              type="button"
+              className={styles.addVideosButton}
+              onClick={() => (showAddPicker ? setShowAddPicker(false) : openAddPicker())}
+            >
+              <PlusIcon className={styles.inlineIcon} /> Add videos
+            </button>
+          )}
+          {isOwner && (
+            <button type="button" className={styles.addVideosButton} onClick={handleCreateSubfolder}>
+              <PlusIcon className={styles.inlineIcon} /> New subfolder
+            </button>
+          )}
           {isOwner && (
             <button className={styles.deleteButton} onClick={handleDelete}>
               Delete Collection
@@ -132,6 +211,73 @@ export default function CollectionDetailPage() {
           )}
         </div>
       </div>
+
+      {data.subfolders?.length > 0 && (
+        <div className={styles.subfolderGrid}>
+          {data.subfolders.map((sub) => (
+            <Link key={sub._id} className={styles.subfolderCard} to={`/collections/${sub._id}`}>
+              <FolderIcon className={styles.subfolderIcon} />
+              {sub.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {showAddPicker && (
+        <div className={styles.addPicker}>
+          <h2 className={styles.collabHeading}>Add your videos</h2>
+          {addError && <div className={styles.error}>{addError}</div>}
+          {myVideos === null ? (
+            <p className={styles.empty}>Loading…</p>
+          ) : (
+            (() => {
+              const inCollection = new Set(data.videos.map((v) => v._id));
+              const candidates = myVideos.filter((v) => !inCollection.has(v._id));
+              if (candidates.length === 0) {
+                return <p className={styles.empty}>All your videos are already in this collection.</p>;
+              }
+              return (
+                <>
+                  <ul className={styles.pickerList}>
+                    {candidates.map((v) => (
+                      <li key={v._id}>
+                        <label className={styles.pickerItem}>
+                          <input
+                            type="checkbox"
+                            checked={pickedIds.has(v._id)}
+                            onChange={() => togglePicked(v._id)}
+                          />
+                          <span className={styles.pickerTitle}>{v.title}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className={styles.actionsRow}>
+                    <button
+                      type="button"
+                      className={styles.collabAddButton}
+                      onClick={handleAddSelected}
+                      disabled={addBusy || pickedIds.size === 0}
+                    >
+                      {addBusy ? 'Adding…' : `Add ${pickedIds.size || ''} video${pickedIds.size === 1 ? '' : 's'}`}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.cancelButton}
+                      onClick={() => {
+                        setShowAddPicker(false);
+                        setPickedIds(new Set());
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              );
+            })()
+          )}
+        </div>
+      )}
 
       {isOwner && (
         <div className={styles.collabPanel}>

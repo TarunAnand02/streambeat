@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Route, Routes } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
+import NotFoundPage from './components/NotFoundPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Spinner from './components/ui/Spinner';
 import { restoreSession } from './features/auth/authSlice';
@@ -14,6 +15,8 @@ const ForgotPasswordPage = lazy(() => import('./features/auth/ForgotPasswordPage
 const LoginPage = lazy(() => import('./features/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./features/auth/RegisterPage'));
 const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage'));
+const VerifyEmailPage = lazy(() => import('./features/auth/VerifyEmailPage'));
+const OAuthCallbackPage = lazy(() => import('./features/auth/OAuthCallbackPage'));
 const AnalyticsPage = lazy(() => import('./features/analytics/AnalyticsPage'));
 const ChannelPage = lazy(() => import('./features/channel/ChannelPage'));
 const SubscriptionsPage = lazy(() => import('./features/channel/SubscriptionsPage'));
@@ -24,6 +27,7 @@ const HistoryPage = lazy(() => import('./features/history/HistoryPage'));
 const HomePage = lazy(() => import('./features/videos/HomePage'));
 const ImportPage = lazy(() => import('./features/videos/ImportPage'));
 const SearchResultsPage = lazy(() => import('./features/videos/SearchResultsPage'));
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
 const UploadPage = lazy(() => import('./features/videos/UploadPage'));
 const WatchPage = lazy(() => import('./features/videos/WatchPage'));
 
@@ -41,6 +45,8 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/oauth-callback" element={<OAuthCallbackPage />} />
 
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
@@ -57,7 +63,10 @@ export default function App() {
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
+
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </Suspense>

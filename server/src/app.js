@@ -14,6 +14,7 @@ import collectionRoutes from './routes/collection.routes.js';
 import commentRoutes from './routes/comment.routes.js';
 import helpRoutes from './routes/help.routes.js';
 import historyRoutes from './routes/history.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import userRoutes from './routes/user.routes.js';
 import videoRoutes from './routes/video.routes.js';
@@ -61,7 +62,10 @@ app.use(
         'frame-src': ["'self'", 'https://www.youtube.com'],
         'script-src': ["'self'", 'https://www.youtube.com'],
         'img-src': ["'self'", 'data:', 'https://i.ytimg.com', ...(storageOrigin ? [storageOrigin] : [])],
-        'media-src': ["'self'", ...(storageOrigin ? [storageOrigin] : [])],
+        // blob: is needed for reading a locally-selected file's duration
+        // client-side before upload (an off-DOM <video> loads a blob: URL
+        // created from the File object) — not related to cloud storage.
+        'media-src': ["'self'", 'blob:', ...(storageOrigin ? [storageOrigin] : [])],
       },
     },
   })
@@ -97,6 +101,7 @@ app.use('/api/collections', collectionRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/help', helpRoutes);
 
 // Combined single-service deployment: if a client build sits alongside the

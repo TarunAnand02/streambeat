@@ -19,6 +19,48 @@
   gap: 18px;
 }
 
+.dropZone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  padding: 32px 20px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  margin-bottom: 20px;
+}
+
+.dropZone:hover {
+  border-color: var(--color-text-subtle);
+}
+
+.dropZoneActive {
+  border-color: var(--color-accent);
+  background: var(--color-surface-raised);
+}
+
+.dropZoneHint {
+  display: block;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  margin-top: 4px;
+}
+
+.dropZoneInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -107,6 +149,7 @@
 
 .queueRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 

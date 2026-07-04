@@ -1,0 +1,49 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.resendButton {
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  border-radius: var(--radius-full);
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.resendButton:hover:not(:disabled) {
+  border-color: var(--color-text-subtle);
+}
+
+.resendButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dismissButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 13px;
+  transition: color 0.15s ease;
+}
+
+.dismissButton:hover {
+  color: var(--color-text);
+}

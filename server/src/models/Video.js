@@ -50,6 +50,12 @@ const videoSchema = new Schema(
       type: String,
       default: null,
     },
+    // Single WebVTT subtitle/caption track. Shares storageProvider with the
+    // rest of the video's assets (see below) — no separate field needed.
+    captionFilename: {
+      type: String,
+      default: null,
+    },
     mimeType: {
       type: String,
       required: function () {
@@ -119,6 +125,15 @@ const videoSchema = new Schema(
       index: true,
     },
     collections: [{ type: Schema.Types.ObjectId, ref: 'Collection', index: true }],
+    // 'public': listed + playable by anyone. 'unlisted': playable by anyone
+    // with the direct link, but excluded from feeds/search. 'private':
+    // playable only by the uploader.
+    visibility: {
+      type: String,
+      enum: ['public', 'unlisted', 'private'],
+      default: 'public',
+      index: true,
+    },
   },
   { timestamps: true }
 );

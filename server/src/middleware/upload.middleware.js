@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
@@ -21,9 +22,11 @@ const STORAGE_ROOT = process.env.STORAGE_DIR
 
 export const VIDEO_STORAGE_DIR = path.join(STORAGE_ROOT, 'videos');
 export const THUMBNAIL_STORAGE_DIR = path.join(STORAGE_ROOT, 'thumbnails');
+export const CAPTION_STORAGE_DIR = path.join(STORAGE_ROOT, 'captions');
 
 const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500MB
 const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_CAPTION_BYTES = 2 * 1024 * 1024; // 2MB — plenty for a WebVTT transcript
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
@@ -84,6 +87,33 @@ export function assertThumbnailSize(file) {
   return true;
 }
 
-for (const dir of [VIDEO_STORAGE_DIR, THUMBNAIL_STORAGE_DIR]) {
+// Captions are a low-risk plain-text asset (only ever rendered as subtitle
+// cues, never executed/embedded as HTML), so — unlike video/image uploads —
+// this accepts based on the .vtt extension rather than a strict MIME
+// whitelist: browsers/OSes are inconsistent about what MIME type they report
+// for .vtt (Windows in particular often has no association for it at all,
+// leading to an empty or generic mimetype). The stored filename is still
+// always randomized, never derived from the client's name.
+const captionStorage = multer.diskStorage({
+  destination(req, file, cb) {
+    cb(null, CAPTION_STORAGE_DIR);
+  },
+  filename(req, file, cb) {
+    cb(null, `${crypto.randomUUID()}.vtt`);
+  },
+});
+
+export const uploadCaption = multer({
+  storage: captionStorage,
+  fileFilter(req, file, cb) {
+    if (!/\.vtt$/i.test(file.originalname)) {
+      return cb(new ApiError(400, 'Captions must be a .vtt (WebVTT) file'));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: MAX_CAPTION_BYTES },
+}).single('caption');
+
+for (const dir of [VIDEO_STORAGE_DIR, THUMBNAIL_STORAGE_DIR, CAPTION_STORAGE_DIR]) {
   fs.mkdirSync(dir, { recursive: true });
 }

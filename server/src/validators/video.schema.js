@@ -5,6 +5,7 @@ const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid video id');
 const category = z.enum(CATEGORY_IDS).optional().default('other');
 const collectionId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid collection id');
 const tagsArray = z.array(z.string().trim().min(1).max(30)).max(20).optional();
+const visibility = z.enum(['public', 'unlisted', 'private']).optional().default('public');
 
 export const createVideoSchema = z.object({
   body: z.object({
@@ -12,6 +13,7 @@ export const createVideoSchema = z.object({
     description: z.string().trim().max(5000).optional().default(''),
     category,
     durationSeconds: z.coerce.number().positive().optional(),
+    visibility,
   }),
   query: z.any(),
   params: z.any(),
@@ -35,6 +37,7 @@ export const updateVideoSchema = z.object({
     category: z.enum(CATEGORY_IDS).optional(),
     tags: tagsArray,
     collections: z.array(collectionId).max(50).optional(),
+    visibility: z.enum(['public', 'unlisted', 'private']).optional(),
   }),
   query: z.any(),
   params: z.object({ id: objectId }),

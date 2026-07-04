@@ -19,10 +19,26 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
     },
+    // Not required for accounts created via Google/GitHub sign-in, which
+    // never set a local password at all.
     passwordHash: {
       type: String,
-      required: true,
+      required: function () {
+        return !this.googleId && !this.githubId;
+      },
       select: false,
+    },
+    googleId: {
+      type: String,
+      default: null,
+      unique: true,
+      sparse: true,
+    },
+    githubId: {
+      type: String,
+      default: null,
+      unique: true,
+      sparse: true,
     },
     avatarUrl: {
       type: String,
@@ -54,6 +70,39 @@ const userSchema = new Schema(
     resetPasswordExpires: {
       type: Date,
       default: null,
+      select: false,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    // Same "store only the hash" principle as resetPasswordTokenHash.
+    emailVerifyTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    emailVerifyExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    // Base32 TOTP secret — only ever read server-side to verify a submitted
+    // code, never sent to the client.
+    twoFactorSecret: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    // SHA-256 hashes of one-time backup codes; each is deleted from this
+    // array the moment it's redeemed.
+    twoFactorBackupCodeHashes: {
+      type: [String],
+      default: [],
       select: false,
     },
   },

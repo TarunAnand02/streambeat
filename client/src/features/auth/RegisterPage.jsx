@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
+import OAuthButtons from './OAuthButtons';
 import { loginUser, registerUser } from './authSlice';
 import styles from './AuthForm.module.css';
 
@@ -78,6 +79,7 @@ export default function RegisterPage() {
             {status === 'loading' ? 'Creating account…' : 'Sign up'}
           </button>
         </form>
+        <OAuthButtons />
         <div className={styles.footer}>
           Already have an account? <Link to="/login">Log in</Link>
         </div>

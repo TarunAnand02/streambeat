@@ -6,6 +6,7 @@ export const createCollectionSchema = z.object({
   body: z.object({
     name: z.string().trim().min(1, 'Name is required').max(60),
     description: z.string().trim().max(300).optional().default(''),
+    parent: objectId.optional().nullable(),
   }),
   query: z.any(),
   params: z.any(),
@@ -15,6 +16,7 @@ export const updateCollectionSchema = z.object({
   body: z.object({
     name: z.string().trim().min(1).max(60).optional(),
     description: z.string().trim().max(300).optional(),
+    parent: objectId.optional().nullable(),
   }),
   query: z.any(),
   params: z.object({ id: objectId }),

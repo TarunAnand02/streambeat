@@ -3,10 +3,20 @@ import { CheckIcon, FilmIcon, PlayIcon } from './ui/Icon';
 import { useHoverPreview } from '../hooks/useHoverPreview';
 import { formatDuration, formatViews, timeAgo } from '../lib/formatDuration';
 import { getCategory } from '../features/videos/categories';
+import SaveToCollectionMenu from '../features/collections/SaveToCollectionMenu';
 import { streamUrl, thumbnailUrl } from '../features/videos/videosApi';
 import styles from './VideoCard.module.css';
 
-export default function VideoCard({ video, style, selectable, selected, onToggleSelect, playlistId }) {
+export default function VideoCard({
+  video,
+  style,
+  selectable,
+  selected,
+  onToggleSelect,
+  playlistId,
+  showSaveTo,
+  onVideoUpdated,
+}) {
   const navigate = useNavigate();
   const { previewing, onMouseEnter, onMouseLeave } = useHoverPreview();
   const category = getCategory(video.category);
@@ -71,12 +81,20 @@ export default function VideoCard({ video, style, selectable, selected, onToggle
         {video.durationSeconds ? (
           <span className={styles.durationBadge}>{formatDuration(video.durationSeconds)}</span>
         ) : null}
+        {video.visibility && video.visibility !== 'public' && (
+          <span className={styles.visibilityBadge}>
+            {video.visibility === 'private' ? 'Private' : 'Unlisted'}
+          </span>
+        )}
         {selectable ? (
           <span className={styles.checkbox}>{selected ? <CheckIcon /> : ''}</span>
         ) : (
-          <button className={styles.playOverlay} onClick={handlePlay} title="Play" aria-label="Play video">
-            <PlayIcon />
-          </button>
+          <>
+            {showSaveTo && <SaveToCollectionMenu video={video} onUpdated={onVideoUpdated} />}
+            <button className={styles.playOverlay} onClick={handlePlay} title="Play" aria-label="Play video">
+              <PlayIcon />
+            </button>
+          </>
         )}
       </div>
       <div className={styles.meta}>

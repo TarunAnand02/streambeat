@@ -62,4 +62,19 @@ export const env = {
   // Optional — override only if ffmpeg/ffprobe aren't on PATH.
   ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
   ffprobePath: process.env.FFPROBE_PATH || 'ffprobe',
+  // Optional OAuth ("Continue with Google/GitHub") — each provider is
+  // independently optional; the login/register pages simply don't show that
+  // button until both its id and secret are set. Redirect URIs are derived
+  // from the server's own base URL rather than needing a separate env var.
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID || null,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID || null,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || null,
+    },
+  },
+  serverOrigin: process.env.SERVER_ORIGIN || `http://localhost:${Number(process.env.PORT) || 5000}`,
 };

@@ -46,6 +46,8 @@ const EDITABLE_STATUSES = new Set(['pending', 'queued']);
 
 export default function UploadPage() {
   const [items, setItems] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
@@ -63,6 +65,7 @@ export default function UploadPage() {
             title: item.title,
             description: item.description,
             category: item.category,
+            visibility: item.visibility,
             durationSeconds: item.durationSeconds,
             videoFile: item.file,
             thumbnailFile: item.thumbnailFile,
@@ -99,9 +102,10 @@ export default function UploadPage() {
     if (next) runItem(next);
   }, [items, runItem]);
 
-  async function handleFilesSelected(e) {
-    const files = Array.from(e.target.files || []);
-    e.target.value = '';
+  const VIDEO_MIME_WHITELIST = ['video/mp4', 'video/webm', 'video/ogg'];
+
+  async function addFiles(fileList) {
+    const files = Array.from(fileList || []).filter((f) => VIDEO_MIME_WHITELIST.includes(f.type));
     const newItems = [];
     for (const file of files) {
       const durationSeconds = await readVideoDuration(file);
@@ -111,6 +115,7 @@ export default function UploadPage() {
         title: titleFromFilename(file.name),
         description: '',
         category: 'other',
+        visibility: 'public',
         durationSeconds,
         thumbnailFile: null,
         thumbnailPreviewUrl: null,
@@ -122,6 +127,39 @@ export default function UploadPage() {
       });
     }
     setItems((prev) => [...prev, ...newItems]);
+  }
+
+  async function handleFilesSelected(e) {
+    await addFiles(e.target.files);
+    e.target.value = '';
+  }
+
+  // Track enter/leave depth so hovering over a child element (e.g. the label
+  // text) doesn't flicker the drop zone's highlighted state off and on.
+  function handleDragEnter(e) {
+    e.preventDefault();
+    dragCounter.current += 1;
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsDragging(false);
+    }
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+  }
+
+  async function handleDrop(e) {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setIsDragging(false);
+    await addFiles(e.dataTransfer.files);
   }
 
   function handleThumbnailChange(id, file) {
@@ -165,12 +203,22 @@ export default function UploadPage() {
     <div className={styles.page}>
       <h1 className={styles.heading}>Upload videos</h1>
 
-      <div className={styles.field}>
+      <div
+        className={isDragging ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         <label className={styles.label} htmlFor="video">
-          Video files (mp4, webm, ogg — max {MAX_VIDEO_MB}MB each, select multiple)
+          Drag & drop videos here, or click to browse
+          <span className={styles.dropZoneHint}>
+            mp4, webm, ogg — max {MAX_VIDEO_MB}MB each, select multiple
+          </span>
         </label>
         <input
           id="video"
+          className={styles.dropZoneInput}
           type="file"
           accept="video/mp4,video/webm,video/ogg"
           multiple
@@ -206,6 +254,17 @@ export default function UploadPage() {
                           {cat.emoji} {cat.label}
                         </option>
                       ))}
+                    </select>
+                    <select
+                      className={styles.input}
+                      value={item.visibility}
+                      disabled={!editable}
+                      onChange={(e) => updateItem(item.id, { visibility: e.target.value })}
+                      aria-label="Visibility"
+                    >
+                      <option value="public">Public</option>
+                      <option value="unlisted">Unlisted</option>
+                      <option value="private">Private</option>
                     </select>
                   </div>
 

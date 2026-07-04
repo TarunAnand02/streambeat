@@ -69,3 +69,18 @@ export async function getSignedFileUrl(key, expiresInSeconds = 3600) {
     expiresIn: expiresInSeconds,
   });
 }
+
+// Unlike getSignedFileUrl (used for video/thumbnail, where redirecting the
+// browser straight to cloud storage avoids proxying large bytes through our
+// own server), captions are small and are loaded via a <track> element —
+// browsers block a <track> whose src resolves to a different origin than the
+// page unless the <video> opts into full CORS mode, which would also change
+// how the (currently working, no-cors) video src itself is fetched. Proxying
+// the tiny caption file through our own server sidesteps that entirely by
+// keeping it same-origin, with no risk to video playback.
+export async function getFileStream(key) {
+  const result = await getClient().send(
+    new GetObjectCommand({ Bucket: env.storage.bucket, Key: key })
+  );
+  return result.Body;
+}

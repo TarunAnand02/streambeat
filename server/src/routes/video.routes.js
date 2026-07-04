@@ -7,7 +7,7 @@ import {
   urlImportLimiter,
   youtubeLimiter,
 } from '../middleware/rateLimiters.js';
-import { uploadThumbnailOnly, uploadVideo } from '../middleware/upload.middleware.js';
+import { uploadCaption, uploadThumbnailOnly, uploadVideo } from '../middleware/upload.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
   bulkActionSchema,
@@ -86,6 +86,7 @@ router.post('/bulk', protect, validate(bulkActionSchema), videoController.bulkAc
 router.get('/:id', optionalAuth, validate(videoIdSchema), videoController.getVideo);
 router.get('/:id/stream', validate(videoIdSchema), videoController.streamVideo);
 router.get('/:id/thumbnail', validate(videoIdSchema), videoController.getThumbnail);
+router.get('/:id/caption', validate(videoIdSchema), videoController.getCaption);
 router.post('/:id/view', optionalAuth, validate(videoIdSchema), videoController.incrementView);
 router.post('/:id/like', protect, validate(videoIdSchema), videoController.toggleLike);
 router.post('/:id/notes', protect, validate(createNoteSchema), videoController.createNote);
@@ -99,6 +100,14 @@ router.patch(
   uploadThumbnailOnly,
   validate(videoIdSchema),
   videoController.updateThumbnail
+);
+router.patch(
+  '/:id/caption',
+  protect,
+  uploadLimiter,
+  uploadCaption,
+  validate(videoIdSchema),
+  videoController.updateCaption
 );
 router.delete('/:id', protect, validate(videoIdSchema), videoController.deleteVideo);
 

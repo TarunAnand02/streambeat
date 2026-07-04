@@ -50,6 +50,7 @@ const YoutubeEmbed = forwardRef(function YoutubeEmbed({ videoId, title, onEnded 
       if (p.isMuted?.()) p.unMute();
       else p.mute();
     },
+    setPlaybackRate: (rate) => playerRef.current?.setPlaybackRate?.(rate),
   }));
 
   useEffect(() => {

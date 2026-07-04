@@ -311,6 +311,48 @@ export const updateVideo = asyncHandler(async (req, res) => {
   res.json({ video });
 });
 
+// Replaces (or adds, if it was skipped at upload time) the thumbnail on an
+// already-uploaded video. Only meaningful for 'upload'-sourced videos —
+// YouTube-sourced ones always use YouTube's own thumbnail.
+export const updateThumbnail = asyncHandler(async (req, res) => {
+  const video = await Video.findById(req.params.id);
+  if (!video) throw new ApiError(404, 'Video not found');
+  if (video.uploader.toString() !== req.userId) {
+    throw new ApiError(403, 'You do not own this video');
+  }
+  if (video.source !== 'upload') {
+    throw new ApiError(400, 'YouTube-sourced videos use their own thumbnail');
+  }
+  if (!req.file) {
+    throw new ApiError(400, 'A thumbnail image is required');
+  }
+  if (!assertThumbnailSize(req.file)) {
+    throw new ApiError(400, 'Thumbnail exceeds the 5MB size limit');
+  }
+
+  const oldFilename = video.thumbnailFilename;
+  const oldStorageProvider = video.storageProvider;
+
+  const storageProvider = await persistUploadedFile(req.file.path, req.file.filename, req.file.mimetype);
+
+  video.thumbnailFilename = req.file.filename;
+  // Only 'upgrade' storageProvider (local -> cloud) when cloud is configured
+  // now — never silently move the video's own file, just track where this
+  // new thumbnail actually landed alongside it.
+  if (storageProvider === 'r2') video.storageProvider = 'r2';
+  await video.save();
+
+  if (oldFilename) {
+    if (oldStorageProvider === 'r2') {
+      deleteFileFromCloud(oldFilename);
+    } else {
+      fs.unlink(path.join(THUMBNAIL_STORAGE_DIR, oldFilename), () => {});
+    }
+  }
+
+  res.json({ video });
+});
+
 // Removes the original file, thumbnail, and any transcoded variants for an
 // 'upload'-sourced video, from whichever storage each one actually lives in.
 function deleteVideoFiles(video) {

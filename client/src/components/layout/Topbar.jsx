@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { logoutUser } from '../../features/auth/authSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { suggestVideos, thumbnailUrl } from '../../features/videos/videosApi';
+import { MenuIcon } from '../ui/Icon';
 import styles from './Topbar.module.css';
 
 export default function Topbar({ onMenuClick }) {
@@ -79,7 +80,7 @@ export default function Topbar({ onMenuClick }) {
   return (
     <header className={styles.topbar}>
       <button type="button" className={styles.menuButton} onClick={onMenuClick} aria-label="Open menu">
-        ☰
+        <MenuIcon />
       </button>
       <div className={styles.searchWrapper} ref={searchRef}>
         <form className={styles.searchForm} onSubmit={handleSubmit}>

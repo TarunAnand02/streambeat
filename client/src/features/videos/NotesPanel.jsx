@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { formatDuration } from '../../lib/formatDuration';
+import { CloseIcon } from '../../components/ui/Icon';
 import { createNote, deleteNote, fetchNotes } from './notesApi';
 import styles from './NotesPanel.module.css';
 
@@ -83,7 +84,7 @@ export default function NotesPanel({ videoId, getCurrentTime, onSeek }) {
                 onClick={() => handleDelete(note._id)}
                 aria-label="Delete note"
               >
-                ✕
+                <CloseIcon />
               </button>
             </li>
           ))}

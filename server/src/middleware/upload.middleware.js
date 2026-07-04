@@ -68,6 +68,14 @@ export const uploadVideo = multer({
   { name: 'thumbnail', maxCount: 1 },
 ]);
 
+// For replacing just the thumbnail on an already-uploaded video (e.g. if
+// the uploader forgot to pick one, or wants a better one later).
+export const uploadThumbnailOnly = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: MAX_THUMBNAIL_BYTES },
+}).single('thumbnail');
+
 export function assertThumbnailSize(file) {
   if (file && file.size > MAX_THUMBNAIL_BYTES) {
     fs.unlink(file.path, () => {});

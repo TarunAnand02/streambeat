@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { createHelpArticle, deleteHelpArticle, fetchHelpArticles, updateHelpArticle } from './helpApi';
+import { ChevronDownIcon } from '../../components/ui/Icon';
 import styles from './HelpPage.module.css';
 
 function ArticleEntry({ entry, isAdmin, onSaved, onDeleted }) {
@@ -216,7 +217,9 @@ export default function HelpPage() {
                 onClick={() => setOpenCategory(isOpen && !isSearching ? null : category.id)}
               >
                 <span>{category.label}</span>
-                <span className={styles.chevron}>{isOpen ? '−' : '+'}</span>
+                <span className={isOpen ? `${styles.chevron} ${styles.chevronOpen}` : styles.chevron}>
+                  <ChevronDownIcon />
+                </span>
               </button>
               {isOpen && (
                 <div className={styles.entries}>

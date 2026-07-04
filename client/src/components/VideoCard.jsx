@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { CheckIcon, FilmIcon, PlayIcon } from './ui/Icon';
 import { useHoverPreview } from '../hooks/useHoverPreview';
 import { formatDuration, formatViews, timeAgo } from '../lib/formatDuration';
 import { getCategory } from '../features/videos/categories';
@@ -41,7 +42,9 @@ export default function VideoCard({ video, style, selectable, selected, onToggle
               decoding="async"
             />
           ) : (
-            <div className={styles.thumbPlaceholder}>🎬</div>
+            <div className={styles.thumbPlaceholder}>
+              <FilmIcon />
+            </div>
           )
         ) : previewing && !selectable ? (
           <video
@@ -61,16 +64,18 @@ export default function VideoCard({ video, style, selectable, selected, onToggle
             decoding="async"
           />
         ) : (
-          <div className={styles.thumbPlaceholder}>🎬</div>
+          <div className={styles.thumbPlaceholder}>
+            <FilmIcon />
+          </div>
         )}
         {video.durationSeconds ? (
           <span className={styles.durationBadge}>{formatDuration(video.durationSeconds)}</span>
         ) : null}
         {selectable ? (
-          <span className={styles.checkbox}>{selected ? '✓' : ''}</span>
+          <span className={styles.checkbox}>{selected ? <CheckIcon /> : ''}</span>
         ) : (
-          <button className={styles.playOverlay} onClick={handlePlay} title="Play">
-            ▶
+          <button className={styles.playOverlay} onClick={handlePlay} title="Play" aria-label="Play video">
+            <PlayIcon />
           </button>
         )}
       </div>

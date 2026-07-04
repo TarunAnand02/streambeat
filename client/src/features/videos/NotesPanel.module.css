@@ -96,12 +96,16 @@
 
 .deleteButton {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
   color: var(--color-text-muted);
   font-size: 13px;
   cursor: pointer;
   padding: 4px;
+  transition: color 0.15s ease;
 }
 
 .deleteButton:hover {

@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { ExternalLinkIcon } from './ui/Icon';
 import styles from './YoutubeEmbed.module.css';
 
 let apiLoadPromise = null;
@@ -90,7 +91,7 @@ const YoutubeEmbed = forwardRef(function YoutubeEmbed({ videoId, title, onEnded 
           target="_blank"
           rel="noopener noreferrer"
         >
-          Watch on YouTube ↗
+          Watch on YouTube <ExternalLinkIcon className={styles.linkIcon} />
         </a>
       </div>
     );

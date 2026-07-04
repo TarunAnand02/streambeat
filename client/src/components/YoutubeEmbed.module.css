@@ -31,14 +31,27 @@
 }
 
 .fallbackLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 10px 20px;
   border-radius: var(--radius-full);
   background: var(--color-accent);
   color: #000;
   font-weight: 700;
   font-size: 14px;
+  transition: filter 0.15s ease, transform 0.1s ease;
 }
 
 .fallbackLink:hover {
   background: var(--color-accent-hover);
+  filter: brightness(1.05);
+}
+
+.fallbackLink:active {
+  transform: scale(0.97);
+}
+
+.linkIcon {
+  font-size: 0.9em;
 }

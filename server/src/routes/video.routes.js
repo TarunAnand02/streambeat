@@ -7,7 +7,7 @@ import {
   urlImportLimiter,
   youtubeLimiter,
 } from '../middleware/rateLimiters.js';
-import { uploadVideo } from '../middleware/upload.middleware.js';
+import { uploadThumbnailOnly, uploadVideo } from '../middleware/upload.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
   bulkActionSchema,
@@ -92,6 +92,14 @@ router.post('/:id/notes', protect, validate(createNoteSchema), videoController.c
 router.get('/:id/notes', protect, validate(videoIdSchema), videoController.listNotes);
 router.delete('/:id/notes/:noteId', protect, validate(noteIdSchema), videoController.deleteNote);
 router.patch('/:id', protect, validate(updateVideoSchema), videoController.updateVideo);
+router.patch(
+  '/:id/thumbnail',
+  protect,
+  uploadLimiter,
+  uploadThumbnailOnly,
+  validate(videoIdSchema),
+  videoController.updateThumbnail
+);
 router.delete('/:id', protect, validate(videoIdSchema), videoController.deleteVideo);
 
 export default router;

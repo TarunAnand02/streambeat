@@ -71,6 +71,15 @@ export async function updateVideo(id, updates) {
   return data.video;
 }
 
+export async function updateThumbnail(id, thumbnailFile) {
+  const form = new FormData();
+  form.append('thumbnail', thumbnailFile);
+  const { data } = await axiosClient.patch(`/videos/${id}/thumbnail`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.video;
+}
+
 export async function deleteVideo(id) {
   await axiosClient.delete(`/videos/${id}`);
 }

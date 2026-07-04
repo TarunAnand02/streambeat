@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { timeAgo } from '../../lib/formatDuration';
 import CommentForm from './CommentForm';
+import { CloseIcon } from '../../components/ui/Icon';
 import { deleteComment, fetchComments } from './commentsApi';
 import styles from './Comments.module.css';
 
@@ -50,8 +51,12 @@ export default function CommentList({ videoId }) {
                 <p className={styles.text}>{comment.text}</p>
               </div>
               {user && comment.user?._id === user.id && (
-                <button className={styles.deleteButton} onClick={() => handleDelete(comment._id)}>
-                  ✕
+                <button
+                  className={styles.deleteButton}
+                  onClick={() => handleDelete(comment._id)}
+                  aria-label="Delete comment"
+                >
+                  <CloseIcon />
                 </button>
               )}
             </li>

@@ -51,6 +51,9 @@
 }
 
 .playAllButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: none;
   background: var(--color-accent);
   color: #000;
@@ -60,6 +63,20 @@
   font-size: 14px;
   flex-shrink: 0;
   text-decoration: none;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.playAllButton:hover {
+  filter: brightness(1.1);
+}
+
+.playAllButton:active {
+  transform: scale(0.96);
+}
+
+.inlineIcon {
+  font-size: 1em;
 }
 
 .empty {
@@ -115,12 +132,16 @@
 }
 
 .collabRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
   color: var(--color-text-muted);
   cursor: pointer;
   font-size: 13px;
   padding: 4px;
+  transition: color 0.15s ease;
 }
 
 .collabRemove:hover {
@@ -180,6 +201,9 @@
 }
 
 .reorderButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--color-border);
   background: var(--color-surface-raised);
   color: var(--color-text);
@@ -187,6 +211,16 @@
   width: 28px;
   height: 28px;
   font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.reorderButton:hover:not(:disabled) {
+  border-color: var(--color-text-subtle);
+}
+
+.reorderButton:active:not(:disabled) {
+  transform: scale(0.92);
 }
 
 .reorderButton:disabled {

@@ -82,6 +82,9 @@
 
 .likeButton,
 .likedButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: 1px solid var(--color-border);
   background: var(--color-surface-raised);
   color: var(--color-text);
@@ -89,6 +92,21 @@
   padding: 8px 16px;
   font-weight: 600;
   font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.likeButton:hover {
+  border-color: var(--color-text-subtle);
+}
+
+.likeButton:active,
+.likedButton:active {
+  transform: scale(0.96);
+}
+
+.likeIcon {
+  font-size: 16px;
 }
 
 .likedButton {

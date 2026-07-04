@@ -1,12 +1,24 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import {
+  BellIcon,
+  ChannelIcon,
+  ChartIcon,
+  ClockIcon,
+  CloseIcon,
+  FolderIcon,
+  HelpIcon,
+  HomeIcon,
+  ImportIcon,
+  UploadIcon,
+} from '../ui/Icon';
 import styles from './Sidebar.module.css';
 
 const navItems = [
-  { to: '/', label: 'Home', icon: '🏠' },
-  { to: '/subscriptions', label: 'Subscriptions', icon: '🔔', protected: true },
-  { to: '/upload', label: 'Upload', icon: '⬆️', protected: true },
-  { to: '/import', label: 'Import', icon: '📥', protected: true },
+  { to: '/', label: 'Home', Icon: HomeIcon },
+  { to: '/subscriptions', label: 'Subscriptions', Icon: BellIcon, protected: true },
+  { to: '/upload', label: 'Upload', Icon: UploadIcon, protected: true },
+  { to: '/import', label: 'Import', Icon: ImportIcon, protected: true },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -17,7 +29,7 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className={styles.topRow}>
         <div className={styles.logo}>StreamBeat</div>
         <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Close menu">
-          ✕
+          <CloseIcon />
         </button>
       </div>
       <nav className={styles.nav}>
@@ -31,7 +43,9 @@ export default function Sidebar({ isOpen, onClose }) {
               }
               end={item.to === '/'}
             >
-              <span className={styles.icon}>{item.icon}</span>
+              <span className={styles.icon}>
+                <item.Icon />
+              </span>
               {item.label}
             </NavLink>
           )
@@ -48,7 +62,9 @@ export default function Sidebar({ isOpen, onClose }) {
                 isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
               }
             >
-              <span className={styles.icon}>📺</span>
+              <span className={styles.icon}>
+                <ChannelIcon />
+              </span>
               Your Channel
             </NavLink>
             <NavLink
@@ -57,7 +73,9 @@ export default function Sidebar({ isOpen, onClose }) {
                 isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
               }
             >
-              <span className={styles.icon}>📁</span>
+              <span className={styles.icon}>
+                <FolderIcon />
+              </span>
               Collections
             </NavLink>
             <NavLink
@@ -66,7 +84,9 @@ export default function Sidebar({ isOpen, onClose }) {
                 isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
               }
             >
-              <span className={styles.icon}>📊</span>
+              <span className={styles.icon}>
+                <ChartIcon />
+              </span>
               Analytics
             </NavLink>
             <NavLink
@@ -75,7 +95,9 @@ export default function Sidebar({ isOpen, onClose }) {
                 isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
               }
             >
-              <span className={styles.icon}>🕒</span>
+              <span className={styles.icon}>
+                <ClockIcon />
+              </span>
               History
             </NavLink>
           </>
@@ -92,7 +114,9 @@ export default function Sidebar({ isOpen, onClose }) {
           isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
         }
       >
-        <span className={styles.icon}>❓</span>
+        <span className={styles.icon}>
+          <HelpIcon />
+        </span>
         Help
       </NavLink>
     </aside>

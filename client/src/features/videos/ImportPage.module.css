@@ -38,6 +38,11 @@
   color: #000;
   font-weight: 700;
   font-size: 14px;
+  transition: filter 0.15s ease;
+}
+
+.fetchButton:hover:not(:disabled) {
+  filter: brightness(1.1);
 }
 
 .fetchButton:disabled {

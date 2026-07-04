@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Chapters from '../../components/Chapters';
 import Spinner from '../../components/ui/Spinner';
+import { ThumbsUpIcon } from '../../components/ui/Icon';
 import YoutubeEmbed from '../../components/YoutubeEmbed';
 import { useAuth } from '../../hooks/useAuth';
 import { formatViews, timeAgo } from '../../lib/formatDuration';
@@ -308,7 +309,8 @@ export default function WatchPage() {
             </button>
           )}
           <button className={liked ? styles.likedButton : styles.likeButton} onClick={handleLike}>
-            👍 {likesCount}
+            <ThumbsUpIcon className={styles.likeIcon} />
+            {likesCount}
           </button>
           {isOwner && (
             <button className={styles.deleteButton} onClick={handleDelete}>

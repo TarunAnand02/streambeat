@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchVideoAnalytics } from './analyticsApi';
+import { ChartIcon } from '../../components/ui/Icon';
 import DailyViewsChart from './DailyViewsChart';
 import styles from './VideoAnalyticsPanel.module.css';
 
@@ -16,7 +17,7 @@ export default function VideoAnalyticsPanel({ videoId }) {
   if (!open) {
     return (
       <button type="button" className={styles.toggleButton} onClick={() => setOpen(true)}>
-        📊 View analytics
+        <ChartIcon className={styles.inlineIcon} /> View analytics
       </button>
     );
   }

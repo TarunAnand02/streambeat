@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDuration } from '../../lib/formatDuration';
 import { categories } from './categories';
+import { CheckIcon } from '../../components/ui/Icon';
 import { importYoutubeBatch, previewYoutubeChannel } from './videosApi';
 import uploadStyles from './UploadPage.module.css';
 import styles from './ImportChannelForm.module.css';
@@ -150,7 +151,7 @@ export default function ImportChannelForm() {
                         {formatDuration(video.durationSeconds)}
                       </span>
                     ) : null}
-                    <span className={styles.checkbox}>{isSelected ? '✓' : ''}</span>
+                    <span className={styles.checkbox}>{isSelected ? <CheckIcon /> : ''}</span>
                   </div>
                   <div className={styles.cardTitle} title={video.title}>
                     {video.title}

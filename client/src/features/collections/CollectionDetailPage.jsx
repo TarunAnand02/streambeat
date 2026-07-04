@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Spinner from '../../components/ui/Spinner';
+import { ArrowDownIcon, ArrowUpIcon, CloseIcon, PlayIcon } from '../../components/ui/Icon';
 import VideoCard from '../../components/VideoCard';
 import {
   addCollaborator,
@@ -121,7 +122,7 @@ export default function CollectionDetailPage() {
           {!isOwner && <span className={styles.roleBadge}>Shared with you · {data.role}</span>}
           {data.videos.length > 0 && (
             <Link className={styles.playAllButton} to={`/watch/${data.videos[0]._id}?playlist=${id}`}>
-              ▶ Play all
+              <PlayIcon className={styles.inlineIcon} /> Play all
             </Link>
           )}
           {isOwner && (
@@ -148,7 +149,7 @@ export default function CollectionDetailPage() {
                     onClick={() => handleRemoveCollaborator(c.user._id)}
                     aria-label="Remove collaborator"
                   >
-                    ✕
+                    <CloseIcon />
                   </button>
                 </li>
               ))}
@@ -198,16 +199,18 @@ export default function CollectionDetailPage() {
                     className={styles.reorderButton}
                     onClick={() => moveVideo(index, -1)}
                     disabled={index === 0}
+                    aria-label="Move video up"
                   >
-                    ↑
+                    <ArrowUpIcon />
                   </button>
                   <button
                     type="button"
                     className={styles.reorderButton}
                     onClick={() => moveVideo(index, 1)}
                     disabled={index === data.videos.length - 1}
+                    aria-label="Move video down"
                   >
-                    ↓
+                    <ArrowDownIcon />
                   </button>
                 </div>
               )}

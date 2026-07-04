@@ -63,7 +63,11 @@
   border: none;
   background: var(--color-accent);
   color: #000;
-  font-size: 14px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   opacity: 0;
   transform: translateY(4px);
   transition:
@@ -72,8 +76,13 @@
     background-color var(--duration-fast) var(--ease-out);
 }
 
-.playOverlay:hover {
+.thumbWrapper:hover .playOverlay:hover {
   background: var(--color-accent-hover);
+  transform: translateY(0) scale(1.08);
+}
+
+.thumbWrapper:hover .playOverlay:active {
+  transform: translateY(0) scale(0.95);
 }
 
 .thumbWrapper:hover .playOverlay {

@@ -377,22 +377,28 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   await user.save();
 
   const resetUrl = `${env.clientOrigin}/reset-password?token=${rawToken}`;
-  // eslint-disable-next-line no-console
-  console.log(`[forgot-password] sending — from: "${env.smtp.from}" to: "${user.email}"`);
-  const sent = isMailerConfigured() ? await sendPasswordResetEmail(user.email, resetUrl) : false;
 
-  if (!sent) {
-    // No SMTP configured (or send failed) — log it so the feature is still
-    // usable in local/dev without setting up email, and surface the link
-    // directly in the response outside production so it's actually usable.
-    // eslint-disable-next-line no-console
-    console.log(`[password reset] ${user.email} -> ${resetUrl}`);
+  // Never await the actual SMTP round-trip here — a slow or unreachable mail
+  // server (e.g. a host that blocks/throttles outbound SMTP) previously took
+  // this whole request down with it instead of just failing to send the
+  // email. The reset token is already saved above, so the link is valid
+  // immediately regardless of whether the email itself gets through.
+  if (isMailerConfigured()) {
+    sendPasswordResetEmail(user.email, resetUrl)
+      .then(() => {
+        // eslint-disable-next-line no-console
+        console.log(`[forgot-password] sent to "${user.email}"`);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.log(`[forgot-password] send failed for "${user.email}": ${err.message}. Link: ${resetUrl}`);
+      });
   } else {
     // eslint-disable-next-line no-console
-    console.log(`[forgot-password] sendMail() completed without error for recipient "${user.email}"`);
+    console.log(`[password reset] ${user.email} -> ${resetUrl}`);
   }
 
-  res.json({ ...genericMessage, ...(env.isProd || sent ? {} : { devResetUrl: resetUrl }) });
+  res.json({ ...genericMessage, ...(env.isProd ? {} : { devResetUrl: resetUrl }) });
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {

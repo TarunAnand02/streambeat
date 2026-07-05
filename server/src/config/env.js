@@ -47,11 +47,12 @@ export const env = {
     pass: process.env.SMTP_PASS || null,
     from: process.env.SMTP_FROM || process.env.SMTP_USER || null,
   },
-  // Optional — preferred over SMTP when set. Resend sends over HTTPS, which
-  // works on hosts (e.g. Render's free tier) that block outbound SMTP ports.
-  resend: {
-    apiKey: process.env.RESEND_API_KEY || null,
-    from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+  // Optional — preferred over SMTP when set. Brevo sends over HTTPS (works
+  // on hosts that block outbound SMTP) and delivers to any recipient once a
+  // single sender email is verified — no domain purchase required.
+  brevo: {
+    apiKey: process.env.BREVO_API_KEY || null,
+    senderEmail: process.env.BREVO_SENDER_EMAIL || null,
   },
   // Optional S3-compatible cloud storage config — works with Supabase
   // Storage, Cloudflare R2, Backblaze B2, MinIO, etc. When unset, uploads

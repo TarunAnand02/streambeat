@@ -4,7 +4,10 @@ import { env } from '../config/env.js';
 let transporter = null;
 
 export function isMailerConfigured() {
-  return Boolean(env.resend.apiKey) || Boolean(env.smtp.host && env.smtp.user && env.smtp.pass);
+  return (
+    Boolean(env.brevo.apiKey && env.brevo.senderEmail) ||
+    Boolean(env.smtp.host && env.smtp.user && env.smtp.pass)
+  );
 }
 
 function getTransporter() {
@@ -19,27 +22,33 @@ function getTransporter() {
   return transporter;
 }
 
-// Resend sends over HTTPS (port 443), which works on hosts that block
-// outbound SMTP ports (25/465/587) — a common free-tier restriction that
-// makes nodemailer hang or fail silently even with correct credentials.
-async function sendViaResend({ to, subject, text, html }) {
-  const res = await fetch('https://api.resend.com/emails', {
+// Brevo sends over HTTPS (works on hosts that block outbound SMTP ports) and,
+// unlike Resend's sandbox mode, delivers to any recipient once its one
+// sender email is verified — no domain purchase required. Preferred first.
+async function sendViaBrevo({ to, subject, text, html }) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${env.resend.apiKey}`,
+      'api-key': env.brevo.apiKey,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: env.resend.from, to, subject, text, html }),
+    body: JSON.stringify({
+      sender: { email: env.brevo.senderEmail },
+      to: [{ email: to }],
+      subject,
+      textContent: text,
+      htmlContent: html,
+    }),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`Resend API ${res.status}: ${body}`);
+    throw new Error(`Brevo API ${res.status}: ${body}`);
   }
 }
 
 async function send({ to, subject, text, html }) {
-  if (env.resend.apiKey) {
-    await sendViaResend({ to, subject, text, html });
+  if (env.brevo.apiKey && env.brevo.senderEmail) {
+    await sendViaBrevo({ to, subject, text, html });
     return;
   }
   await getTransporter().sendMail({ from: env.smtp.from, to, subject, text, html });

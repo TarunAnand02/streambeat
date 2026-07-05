@@ -42,10 +42,13 @@ export default function RegisterPage() {
               autoComplete="username"
               minLength={3}
               maxLength={30}
+              pattern="[a-zA-Z0-9_]+"
+              title="3-30 characters: letters, numbers, and underscores only"
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
+            <p className={styles.hint}>3-30 characters — letters, numbers, and underscores only.</p>
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="email">

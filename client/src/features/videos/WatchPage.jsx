@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Chapters from '../../components/Chapters';
-import { playVideo, setPlaying, updateProgress } from '../player/playerSlice';
 import Spinner from '../../components/ui/Spinner';
 import { TheaterIcon, ThumbsUpIcon } from '../../components/ui/Icon';
 import { useToast } from '../../components/toast/ToastProvider';
@@ -33,9 +31,6 @@ export default function WatchPage() {
   const navigate = useNavigate();
   const { user, initialized } = useAuth();
   const showToast = useToast();
-  const dispatch = useDispatch();
-  const playerCurrentVideo = useSelector((state) => state.player.currentVideo);
-  const playerCurrentTime = useSelector((state) => state.player.currentTime);
   const [searchParams] = useSearchParams();
   const playlistId = searchParams.get('playlist');
   const [video, setVideo] = useState(null);
@@ -119,21 +114,6 @@ export default function WatchPage() {
         setLiked(user ? data.likes?.includes(user.id) : false);
         registerView(videoId).catch(() => {});
         setLoading(false);
-        if (data.source === 'upload') {
-          // Resuming the same video the mini-player was already tracking
-          // (e.g. the user clicked back into it) — pick up from its saved
-          // position instead of restarting from 0.
-          if (playerCurrentVideo?.id === data._id) {
-            resumeTimeRef.current = playerCurrentTime;
-          }
-          dispatch(
-            playVideo({
-              id: data._id,
-              title: data.title,
-              uploaderName: data.uploader?.username,
-            })
-          );
-        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -311,9 +291,6 @@ export default function WatchPage() {
               }
               videoRef.current.playbackRate = playbackRate;
             }}
-            onTimeUpdate={(e) => dispatch(updateProgress(e.currentTarget.currentTime))}
-            onPlay={() => dispatch(setPlaying(true))}
-            onPause={() => dispatch(setPlaying(false))}
           >
             {video.captionFilename && (
               <track kind="subtitles" src={captionUrl(video._id)} srcLang="en" label="English" default />

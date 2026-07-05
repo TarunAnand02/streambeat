@@ -20,10 +20,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.contentWithPlayerBar {
-  padding-bottom: calc(24px + 64px + env(safe-area-inset-bottom));
-}
-
 .pageEnter {
   animation: global(fadeInUp) var(--duration-slow) var(--ease-out) both;
 }

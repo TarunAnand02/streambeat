@@ -662,6 +662,37 @@ export const suggestVideos = asyncHandler(async (req, res) => {
   res.json({ videos });
 });
 
+const TRENDING_WINDOW_DAYS = 7;
+const TRENDING_LIMIT = 20;
+
+// "Trending" = watched a lot *recently*, not just highest lifetime views —
+// otherwise an old video with a huge total view count would permanently
+// dominate and a video actually being watched a lot right now would never
+// surface. ViewEvent is a timestamped per-view log kept exactly for this.
+export const getTrending = asyncHandler(async (req, res) => {
+  const since = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  const ranked = await ViewEvent.aggregate([
+    { $match: { createdAt: { $gte: since } } },
+    { $group: { _id: '$video', recentViews: { $sum: 1 } } },
+    { $sort: { recentViews: -1 } },
+    { $limit: TRENDING_LIMIT * 2 }, // over-fetch: some may since be private/deleted
+  ]);
+
+  const orderedIds = ranked.map((r) => r._id);
+  const videos = await Video.find({ _id: { $in: orderedIds }, visibility: 'public' })
+    .populate('uploader', 'username avatarUrl')
+    .lean();
+
+  const byId = new Map(videos.map((v) => [v._id.toString(), v]));
+  const trending = orderedIds
+    .map((id) => byId.get(id.toString()))
+    .filter(Boolean)
+    .slice(0, TRENDING_LIMIT);
+
+  res.json({ videos: trending });
+});
+
 const RECOMMENDATION_LIMIT = 20;
 const RECOMMENDATION_CANDIDATE_POOL = 300;
 

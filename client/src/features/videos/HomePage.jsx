@@ -5,7 +5,7 @@ import DurationFilter, { DURATION_BUCKETS } from '../../components/DurationFilte
 import VideoCardSkeleton from '../../components/VideoCardSkeleton';
 import VideoRow from '../../components/VideoRow';
 import { getCategory } from './categories';
-import { fetchRecommended, fetchVideos } from './videosApi';
+import { fetchRecommended, fetchTrending, fetchVideos } from './videosApi';
 import styles from './HomePage.module.css';
 
 export default function HomePage() {
@@ -14,10 +14,14 @@ export default function HomePage() {
   const [category, setCategory] = useState('all');
   const [durationBucket, setDurationBucket] = useState(null);
   const [recommended, setRecommended] = useState([]);
+  const [trending, setTrending] = useState([]);
 
   useEffect(() => {
     fetchRecommended()
       .then(setRecommended)
+      .catch(() => {});
+    fetchTrending()
+      .then(setTrending)
       .catch(() => {});
   }, []);
 
@@ -66,6 +70,9 @@ export default function HomePage() {
         </div>
       ) : (
         <div>
+          {category === 'all' && !durationBucket && trending.length > 0 && (
+            <VideoRow title="Trending" videos={trending} />
+          )}
           {category === 'all' && !durationBucket && recommended.length > 0 && (
             <VideoRow title="Recommended for you" videos={recommended} />
           )}

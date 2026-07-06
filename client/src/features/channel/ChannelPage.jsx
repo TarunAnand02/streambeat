@@ -6,6 +6,7 @@ import Avatar from '../../components/ui/Avatar';
 import { CalendarIcon, MessageIcon, UploadIcon } from '../../components/ui/Icon';
 import { useToast } from '../../components/toast/ToastProvider';
 import { useAuth } from '../../hooks/useAuth';
+import { useDocumentMeta } from '../../hooks/useDocumentMeta';
 import { timeAgo } from '../../lib/formatDuration';
 import { fetchCollections } from '../collections/collectionsApi';
 import { bulkVideoAction, deleteVideo } from '../videos/videosApi';
@@ -160,6 +161,11 @@ export default function ChannelPage() {
       setBulkBusy(false);
     }
   }
+
+  useDocumentMeta(
+    data?.user?.username,
+    data?.user?.bio || (data?.user?.username ? `${data.user.username}'s channel on StreamBeat` : undefined)
+  );
 
   if (loading || !data) return <VideoCardSkeleton />;
 

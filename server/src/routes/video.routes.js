@@ -37,6 +37,7 @@ router.get(
   videoController.suggestVideos
 );
 router.get('/recommended', optionalAuth, videoController.getRecommended);
+router.get('/trending', videoController.getTrending);
 router.get(
   '/youtube-preview',
   protect,

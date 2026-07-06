@@ -45,6 +45,11 @@ export async function fetchRecommended() {
   return data.videos;
 }
 
+export async function fetchTrending() {
+  const { data } = await axiosClient.get('/videos/trending');
+  return data.videos;
+}
+
 export async function uploadVideo(
   { title, description, category, durationSeconds, videoFile, thumbnailFile, visibility },
   onUploadProgress,

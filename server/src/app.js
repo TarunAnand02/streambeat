@@ -19,6 +19,9 @@ import notificationRoutes from './routes/notification.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import userRoutes from './routes/user.routes.js';
 import videoRoutes from './routes/video.routes.js';
+import { getRobotsTxt, getSitemap } from './controllers/seo.controller.js';
+import { Video } from './models/Video.js';
+import { isCrawlerUserAgent, renderVideoMetaHtml } from './utils/seo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -116,6 +119,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/help', helpRoutes);
 app.use('/api/categories', categoryRoutes);
 
+app.get('/robots.txt', getRobotsTxt);
+app.get('/sitemap.xml', getSitemap);
+
 // Combined single-service deployment: if a client build sits alongside the
 // server (see server/README-deploy or the root render.yaml), serve it
 // directly so client+API share one origin — this avoids CORS entirely and
@@ -124,6 +130,36 @@ app.use('/api/categories', categoryRoutes);
 // so this block is simply skipped.
 const clientDistPath = path.resolve(__dirname, '../../client/dist');
 if (env.isProd && fs.existsSync(clientDistPath)) {
+  // Link-preview crawlers (WhatsApp, Slack, Discord, Twitter…) don't run JS,
+  // so they'd otherwise see this SPA's static, video-agnostic <title>/meta
+  // for every shared /watch/:id link. Serve them a tiny server-rendered page
+  // with the real title/description/thumbnail instead — real browsers (and
+  // JS-executing crawlers like Googlebot) fall through to the normal SPA.
+  app.get('/watch/:id', async (req, res, next) => {
+    if (!isCrawlerUserAgent(req.headers['user-agent'])) return next();
+    try {
+      const video = await Video.findOne({ _id: req.params.id, visibility: 'public' }).lean();
+      if (!video) return next();
+
+      const imageUrl =
+        video.source === 'youtube'
+          ? video.youtubeThumbnailUrl
+          : video.thumbnailFilename
+            ? `${env.clientOrigin}/api/videos/${video._id}/thumbnail`
+            : null;
+
+      res.send(
+        renderVideoMetaHtml({
+          video,
+          pageUrl: `${env.clientOrigin}/watch/${video._id}`,
+          imageUrl,
+        })
+      );
+    } catch {
+      next();
+    }
+  });
+
   app.use(express.static(clientDistPath));
   app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(clientDistPath, 'index.html'));

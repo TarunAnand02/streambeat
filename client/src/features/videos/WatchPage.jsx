@@ -8,6 +8,7 @@ import { useToast } from '../../components/toast/ToastProvider';
 import SaveToCollectionMenu from '../collections/SaveToCollectionMenu';
 import YoutubeEmbed from '../../components/YoutubeEmbed';
 import { useAuth } from '../../hooks/useAuth';
+import { useDocumentMeta } from '../../hooks/useDocumentMeta';
 import { formatViews, timeAgo } from '../../lib/formatDuration';
 import { parseChapters } from '../../lib/parseChapters';
 import VideoAnalyticsPanel from '../analytics/VideoAnalyticsPanel';
@@ -256,6 +257,8 @@ export default function WatchPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [video, seekTo, getCurrentTime]);
+
+  useDocumentMeta(video?.title, video?.description?.slice(0, 160));
 
   if (notFound) {
     return (

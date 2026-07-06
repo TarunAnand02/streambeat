@@ -43,9 +43,23 @@ const userSchema = new Schema(
       unique: true,
       sparse: true,
     },
+    // Set automatically by the avatar upload endpoint to this app's own
+    // stable `/api/users/:id/avatar` route — never a signed cloud URL
+    // directly, since those expire and can't be persisted long-term.
     avatarUrl: {
       type: String,
       default: null,
+    },
+    avatarFilename: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    avatarStorageProvider: {
+      type: String,
+      enum: ['local', 'r2'],
+      default: 'local',
+      select: false,
     },
     bio: {
       type: String,

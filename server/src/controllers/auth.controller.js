@@ -54,7 +54,7 @@ export async function issueSession(req, res, user) {
   return accessToken;
 }
 
-function toPublicUser(user) {
+export function toPublicUser(user) {
   return {
     id: user._id,
     username: user.username,

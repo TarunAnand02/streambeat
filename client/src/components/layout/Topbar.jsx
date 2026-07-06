@@ -5,6 +5,7 @@ import { logoutUser } from '../../features/auth/authSlice';
 import { useAuth } from '../../hooks/useAuth';
 import NotificationsMenu from '../../features/notifications/NotificationsMenu';
 import { suggestVideos, thumbnailUrl } from '../../features/videos/videosApi';
+import Avatar from '../ui/Avatar';
 import { MenuIcon } from '../ui/Icon';
 import styles from './Topbar.module.css';
 
@@ -125,7 +126,7 @@ export default function Topbar({ onMenuClick }) {
         {isAuthenticated ? (
           <div className={styles.menuWrapper} ref={menuRef}>
             <button className={styles.avatar} onClick={() => setMenuOpen((v) => !v)}>
-              {user.username.charAt(0).toUpperCase()}
+              <Avatar username={user.username} avatarUrl={user.avatarUrl} size={36} />
             </button>
             {menuOpen && (
               <div className={styles.menu}>

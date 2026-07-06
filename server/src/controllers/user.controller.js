@@ -1,27 +1,22 @@
+import fs from 'fs';
+import path from 'path';
 import { Comment } from '../models/Comment.js';
 import { Subscription } from '../models/Subscription.js';
 import { User } from '../models/User.js';
 import { Video } from '../models/Video.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { toPublicUser } from './auth.controller.js';
+import { persistUploadedFile } from './video.controller.js';
+import { AVATAR_STORAGE_DIR, assertAvatarSize } from '../middleware/upload.middleware.js';
+import { deleteFileFromCloud, getSignedFileUrl } from '../utils/storage.js';
 
 const ACTIVITY_LIMIT = 15;
 
 export const getMe = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.userId);
+  const user = await User.findById(req.userId).select('+passwordHash');
   if (!user) throw new ApiError(404, 'User not found');
-  res.json({
-    user: {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      avatarUrl: user.avatarUrl,
-      bio: user.bio,
-      isAdmin: user.isAdmin,
-      emailVerified: user.emailVerified,
-      twoFactorEnabled: user.twoFactorEnabled,
-    },
-  });
+  res.json({ user: toPublicUser(user) });
 });
 
 export const getChannel = asyncHandler(async (req, res) => {
@@ -85,23 +80,94 @@ export const getChannel = asyncHandler(async (req, res) => {
 });
 
 export const updateMe = asyncHandler(async (req, res) => {
-  const { bio, avatarUrl } = req.body;
+  // Avatar changes go exclusively through updateAvatar/deleteAvatar below,
+  // which keep avatarUrl in sync with avatarFilename/avatarStorageProvider —
+  // accepting an arbitrary avatarUrl here would let the two drift apart.
+  const { bio } = req.body;
   const user = await User.findByIdAndUpdate(
     req.userId,
-    { $set: { ...(bio !== undefined && { bio }), ...(avatarUrl !== undefined && { avatarUrl }) } },
-    { new: true, runValidators: true }
+    { $set: { ...(bio !== undefined && { bio }) } },
+    { new: true, runValidators: true, select: '+passwordHash' }
   );
   if (!user) throw new ApiError(404, 'User not found');
-  res.json({
-    user: {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      avatarUrl: user.avatarUrl,
-      bio: user.bio,
-      isAdmin: user.isAdmin,
-      emailVerified: user.emailVerified,
-      twoFactorEnabled: user.twoFactorEnabled,
-    },
-  });
+  res.json({ user: toPublicUser(user) });
+});
+
+// Serves the currently logged-in user's avatar image — <img> can't send an
+// Authorization header, so this is deliberately a public route (mirrors
+// getThumbnail's reasoning for videos).
+export const getAvatar = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).select('+avatarFilename +avatarStorageProvider');
+  if (!user || !user.avatarFilename) {
+    throw new ApiError(404, 'Avatar not found');
+  }
+
+  if (user.avatarStorageProvider === 'r2') {
+    const url = await getSignedFileUrl(user.avatarFilename);
+    return res.redirect(302, url);
+  }
+
+  const filePath = path.join(AVATAR_STORAGE_DIR, user.avatarFilename);
+  if (!fs.existsSync(filePath)) {
+    throw new ApiError(404, 'Avatar file missing on disk');
+  }
+  res.sendFile(filePath);
+});
+
+export const updateAvatar = asyncHandler(async (req, res) => {
+  if (!req.file) throw new ApiError(400, 'An image file is required');
+  if (!assertAvatarSize(req.file)) {
+    throw new ApiError(400, 'Avatar exceeds the 5MB size limit');
+  }
+
+  const user = await User.findById(req.userId).select('+passwordHash +avatarFilename +avatarStorageProvider');
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const oldFilename = user.avatarFilename;
+  const oldStorageProvider = user.avatarStorageProvider;
+
+  const storageProvider = await persistUploadedFile(req.file.path, req.file.filename, req.file.mimetype);
+
+  user.avatarFilename = req.file.filename;
+  user.avatarStorageProvider = storageProvider;
+  // A path relative to the API, not an absolute URL — mirrors how video
+  // thumbnail/stream/caption URLs work (the client builds the full URL from
+  // its own configured API origin). Baking a server-computed absolute origin
+  // in here instead would silently break every existing avatar the moment
+  // that origin config is ever wrong, same as the CLIENT_ORIGIN issue found
+  // earlier for email links.
+  user.avatarUrl = `/users/${user._id}/avatar`;
+  await user.save();
+
+  if (oldFilename) {
+    if (oldStorageProvider === 'r2') {
+      deleteFileFromCloud(oldFilename);
+    } else {
+      fs.unlink(path.join(AVATAR_STORAGE_DIR, oldFilename), () => {});
+    }
+  }
+
+  res.json({ user: toPublicUser(user) });
+});
+
+export const deleteAvatar = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.userId).select('+passwordHash +avatarFilename +avatarStorageProvider');
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const oldFilename = user.avatarFilename;
+  const oldStorageProvider = user.avatarStorageProvider;
+
+  user.avatarFilename = null;
+  user.avatarUrl = null;
+  await user.save();
+
+  if (oldFilename) {
+    if (oldStorageProvider === 'r2') {
+      deleteFileFromCloud(oldFilename);
+    } else {
+      fs.unlink(path.join(AVATAR_STORAGE_DIR, oldFilename), () => {});
+    }
+  }
+
+  res.json({ user: toPublicUser(user) });
 });

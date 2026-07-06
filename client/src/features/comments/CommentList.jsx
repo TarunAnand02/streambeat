@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { timeAgo } from '../../lib/formatDuration';
 import CommentForm from './CommentForm';
+import Avatar from '../../components/ui/Avatar';
 import { CloseIcon } from '../../components/ui/Icon';
 import { deleteComment, fetchComments } from './commentsApi';
 import styles from './Comments.module.css';
@@ -40,9 +41,12 @@ export default function CommentList({ videoId }) {
         <ul className={styles.list}>
           {comments.map((comment) => (
             <li key={comment._id} className={styles.comment}>
-              <div className={styles.avatar}>
-                {comment.user?.username?.charAt(0).toUpperCase()}
-              </div>
+              <Avatar
+                username={comment.user?.username}
+                avatarUrl={comment.user?.avatarUrl}
+                size={36}
+                className={styles.avatar}
+              />
               <div className={styles.body}>
                 <div className={styles.commentHeader}>
                   <span className={styles.username}>{comment.user?.username}</span>

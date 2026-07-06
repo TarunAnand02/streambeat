@@ -5,6 +5,20 @@ export async function updateProfile(updates) {
   return data.user;
 }
 
+export async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  const { data } = await axiosClient.put('/users/me/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.user;
+}
+
+export async function deleteAvatar() {
+  const { data } = await axiosClient.delete('/users/me/avatar');
+  return data.user;
+}
+
 export async function changePassword({ currentPassword, newPassword }) {
   const { data } = await axiosClient.post('/auth/change-password', {
     currentPassword,

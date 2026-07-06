@@ -23,10 +23,12 @@ const STORAGE_ROOT = process.env.STORAGE_DIR
 export const VIDEO_STORAGE_DIR = path.join(STORAGE_ROOT, 'videos');
 export const THUMBNAIL_STORAGE_DIR = path.join(STORAGE_ROOT, 'thumbnails');
 export const CAPTION_STORAGE_DIR = path.join(STORAGE_ROOT, 'captions');
+export const AVATAR_STORAGE_DIR = path.join(STORAGE_ROOT, 'avatars');
 
 const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500MB
 const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_CAPTION_BYTES = 2 * 1024 * 1024; // 2MB — plenty for a WebVTT transcript
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB, same cap as thumbnails
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
@@ -114,6 +116,36 @@ export const uploadCaption = multer({
   limits: { fileSize: MAX_CAPTION_BYTES },
 }).single('caption');
 
-for (const dir of [VIDEO_STORAGE_DIR, THUMBNAIL_STORAGE_DIR, CAPTION_STORAGE_DIR]) {
+const avatarStorage = multer.diskStorage({
+  destination(req, file, cb) {
+    cb(null, AVATAR_STORAGE_DIR);
+  },
+  filename(req, file, cb) {
+    const name = randomFilenameFor(file.mimetype, 'image');
+    if (!name) return cb(new ApiError(400, 'Unsupported file type'));
+    cb(null, name);
+  },
+});
+
+export const uploadAvatar = multer({
+  storage: avatarStorage,
+  fileFilter(req, file, cb) {
+    if (!IMAGE_MIME_WHITELIST.includes(file.mimetype)) {
+      return cb(new ApiError(400, 'Unsupported image type'));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: MAX_AVATAR_BYTES },
+}).single('avatar');
+
+export function assertAvatarSize(file) {
+  if (file && file.size > MAX_AVATAR_BYTES) {
+    fs.unlink(file.path, () => {});
+    return false;
+  }
+  return true;
+}
+
+for (const dir of [VIDEO_STORAGE_DIR, THUMBNAIL_STORAGE_DIR, CAPTION_STORAGE_DIR, AVATAR_STORAGE_DIR]) {
   fs.mkdirSync(dir, { recursive: true });
 }

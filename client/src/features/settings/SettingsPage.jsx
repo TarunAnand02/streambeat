@@ -1,23 +1,29 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setCredentials, updateUser } from '../auth/authSlice';
 import { useAuth } from '../../hooks/useAuth';
-import { changePassword, updateProfile } from './settingsApi';
+import { useToast } from '../../components/toast/ToastProvider';
+import Avatar from '../../components/ui/Avatar';
+import { changePassword, deleteAvatar, updateProfile, uploadAvatar } from './settingsApi';
 import PasswordInput from '../../components/ui/PasswordInput';
 import AppearanceSection from './AppearanceSection';
 import SessionsSection from './SessionsSection';
 import TwoFactorSection from './TwoFactorSection';
 import styles from './SettingsPage.module.css';
 
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const dispatch = useDispatch();
+  const showToast = useToast();
+  const avatarInputRef = useRef(null);
 
   const [bio, setBio] = useState(user?.bio || '');
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -32,13 +38,46 @@ export default function SettingsPage() {
     setProfileSaved(false);
     setProfileSaving(true);
     try {
-      const updated = await updateProfile({ bio, avatarUrl });
+      const updated = await updateProfile({ bio });
       dispatch(updateUser(updated));
       setProfileSaved(true);
     } catch (err) {
       setProfileError(err.response?.data?.message || 'Could not save profile');
     } finally {
       setProfileSaving(false);
+    }
+  }
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > MAX_AVATAR_BYTES) {
+      showToast('Image exceeds the 5MB size limit', { type: 'error' });
+      return;
+    }
+    setAvatarBusy(true);
+    try {
+      const updated = await uploadAvatar(file);
+      dispatch(updateUser(updated));
+      showToast('Profile photo updated', { type: 'success' });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not upload photo', { type: 'error' });
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setAvatarBusy(true);
+    try {
+      const updated = await deleteAvatar();
+      dispatch(updateUser(updated));
+      showToast('Profile photo removed', { type: 'success' });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not remove photo', { type: 'error' });
+    } finally {
+      setAvatarBusy(false);
     }
   }
 
@@ -73,6 +112,36 @@ export default function SettingsPage() {
 
       <section className={styles.section}>
         <h2 className={styles.sectionHeading}>Profile</h2>
+        <div className={styles.avatarRow}>
+          <Avatar username={user?.username} avatarUrl={user?.avatarUrl} size={64} />
+          <div className={styles.avatarActions}>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={handleAvatarChange}
+            />
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              disabled={avatarBusy}
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              {avatarBusy ? 'Working…' : 'Upload photo'}
+            </button>
+            {user?.avatarUrl && (
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                disabled={avatarBusy}
+                onClick={handleAvatarRemove}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
         <form className={styles.form} onSubmit={handleProfileSubmit}>
           {profileError && <div className={styles.error}>{profileError}</div>}
           {profileSaved && <div className={styles.success}>Profile updated.</div>}
@@ -91,22 +160,6 @@ export default function SettingsPage() {
                 setProfileSaved(false);
               }}
               placeholder="Tell people a bit about yourself…"
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="avatarUrl">
-              Avatar URL
-            </label>
-            <input
-              id="avatarUrl"
-              className={styles.input}
-              type="url"
-              value={avatarUrl}
-              onChange={(e) => {
-                setAvatarUrl(e.target.value);
-                setProfileSaved(false);
-              }}
-              placeholder="https://…"
             />
           </div>
           <button className={styles.submit} type="submit" disabled={profileSaving}>

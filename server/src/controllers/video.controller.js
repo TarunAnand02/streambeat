@@ -43,7 +43,7 @@ import {
 // Uploads a just-saved local video/thumbnail file to cloud storage when
 // configured, returning the storage provider to record on the Video doc.
 // No-op (stays local) when cloud storage isn't configured.
-async function persistUploadedFile(localPath, filename, mimeType) {
+export async function persistUploadedFile(localPath, filename, mimeType) {
   if (!isCloudStorageConfigured()) return 'local';
   await uploadFileToCloud(localPath, filename, mimeType);
   return 'r2';

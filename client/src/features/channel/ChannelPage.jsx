@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import VideoCard from '../../components/VideoCard';
 import VideoCardSkeleton from '../../components/VideoCardSkeleton';
+import Avatar from '../../components/ui/Avatar';
 import { CalendarIcon, MessageIcon, UploadIcon } from '../../components/ui/Icon';
 import { useToast } from '../../components/toast/ToastProvider';
 import { useAuth } from '../../hooks/useAuth';
@@ -165,7 +166,12 @@ export default function ChannelPage() {
   return (
     <div>
       <div className={styles.header}>
-        <div className={styles.avatar}>{data.user.username.charAt(0).toUpperCase()}</div>
+        <Avatar
+          username={data.user.username}
+          avatarUrl={data.user.avatarUrl}
+          size={80}
+          className={styles.avatar}
+        />
         <div className={styles.headerInfo}>
           <h1 className={styles.username}>{data.user.username}</h1>
           <p className={styles.statsRow}>

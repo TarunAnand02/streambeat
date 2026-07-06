@@ -19,6 +19,21 @@ export default function ImportVideoForm() {
   async function handleFetch(e) {
     e.preventDefault();
     setError(null);
+
+    // A channel URL (/@handle, /channel/…, /c/…, /user/…) has no single
+    // video to fetch — catch it before the request and point people at the
+    // tab meant for that, rather than a generic parse-failure message.
+    try {
+      const { pathname } = new URL(url);
+      if (/^\/(@|channel\/|c\/|user\/)/.test(pathname)) {
+        setError('That\'s a channel link — use the "YouTube channel" tab above instead.');
+        return;
+      }
+    } catch {
+      // Not a parseable absolute URL — let the normal fetch flow and
+      // server-side validation handle reporting that.
+    }
+
     setFetching(true);
     try {
       const result = await previewYoutubeVideo(url);

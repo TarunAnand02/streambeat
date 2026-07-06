@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Chapters from '../../components/Chapters';
 import Spinner from '../../components/ui/Spinner';
-import { TheaterIcon, ThumbsUpIcon } from '../../components/ui/Icon';
+import Avatar from '../../components/ui/Avatar';
+import { ShareIcon, TheaterIcon, ThumbsUpIcon } from '../../components/ui/Icon';
 import { useToast } from '../../components/toast/ToastProvider';
 import SaveToCollectionMenu from '../collections/SaveToCollectionMenu';
 import YoutubeEmbed from '../../components/YoutubeEmbed';
@@ -162,6 +163,15 @@ export default function WatchPage() {
     const result = await toggleLikeVideo(videoId);
     setLiked(result.liked);
     setLikesCount(result.likesCount);
+  }
+
+  async function handleShare() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      showToast('Link copied to clipboard', { type: 'success' });
+    } catch {
+      showToast('Could not copy link', { type: 'error' });
+    }
   }
 
   async function handleDelete() {
@@ -354,54 +364,69 @@ export default function WatchPage() {
 
       <h1 className={styles.title}>{video.title}</h1>
 
-      <div className={styles.meta}>
-        <div className={styles.uploaderInfo}>
-          <span className={styles.uploaderName}>{video.uploader?.username}</span>
-          <span className={styles.stats}>
-            {formatViews(video.views)} · {timeAgo(video.createdAt)}
-            {typeof video.subscriberCount === 'number' &&
-              ` · ${video.subscriberCount} subscriber${video.subscriberCount === 1 ? '' : 's'}`}
-          </span>
-        </div>
-        <div className={styles.actions}>
-          {!isOwner && (
-            <button
-              className={video.isSubscribed ? styles.subscribedButton : styles.subscribeButton}
-              onClick={handleToggleSubscribe}
-              disabled={subBusy}
-            >
-              {video.isSubscribed ? 'Subscribed' : 'Subscribe'}
-            </button>
-          )}
-          <button className={liked ? styles.likedButton : styles.likeButton} onClick={handleLike}>
-            <ThumbsUpIcon className={styles.likeIcon} />
-            {likesCount}
+      <div className={styles.channelRow}>
+        {video.uploader && (
+          <Link to={`/channel/${video.uploader._id}`} className={styles.channelInfo}>
+            <Avatar username={video.uploader.username} avatarUrl={video.uploader.avatarUrl} size={40} />
+            <div className={styles.channelText}>
+              <span className={styles.uploaderName}>{video.uploader.username}</span>
+              {typeof video.subscriberCount === 'number' && (
+                <span className={styles.subscriberCount}>
+                  {video.subscriberCount} subscriber{video.subscriberCount === 1 ? '' : 's'}
+                </span>
+              )}
+            </div>
+          </Link>
+        )}
+        {!isOwner && (
+          <button
+            className={video.isSubscribed ? styles.subscribedButton : styles.subscribeButton}
+            onClick={handleToggleSubscribe}
+            disabled={subBusy}
+          >
+            {video.isSubscribed ? 'Subscribed' : 'Subscribe'}
           </button>
-          {isOwner && <SaveToCollectionMenu video={video} onUpdated={setVideo} variant="labeled" />}
-          {isOwner && (
-            <button className={styles.deleteButton} onClick={handleDelete}>
-              Delete
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      {video.description && (
-        <div className={styles.descriptionBlock}>
-          <p className={descExpanded ? styles.description : `${styles.description} ${styles.descriptionClamped}`}>
-            {video.description}
-          </p>
-          {(video.description.length > 180 || video.description.split('\n').length > 3) && (
-            <button
-              type="button"
-              className={styles.readMoreButton}
-              onClick={() => setDescExpanded((v) => !v)}
-            >
-              {descExpanded ? 'Show less' : 'Read more'}
-            </button>
-          )}
+      <div className={styles.actions}>
+        <button className={liked ? styles.likedButton : styles.likeButton} onClick={handleLike}>
+          <ThumbsUpIcon className={styles.likeIcon} />
+          {likesCount}
+        </button>
+        <button className={styles.pillButton} onClick={handleShare}>
+          <ShareIcon className={styles.likeIcon} />
+          Share
+        </button>
+        {isOwner && <SaveToCollectionMenu video={video} onUpdated={setVideo} variant="labeled" />}
+        {isOwner && (
+          <button className={styles.deleteButton} onClick={handleDelete}>
+            Delete
+          </button>
+        )}
+      </div>
+
+      <div className={styles.descriptionBlock}>
+        <div className={styles.descriptionMeta}>
+          {formatViews(video.views)} · {timeAgo(video.createdAt)}
         </div>
-      )}
+        {video.description && (
+          <>
+            <p className={descExpanded ? styles.description : `${styles.description} ${styles.descriptionClamped}`}>
+              {video.description}
+            </p>
+            {(video.description.length > 180 || video.description.split('\n').length > 3) && (
+              <button
+                type="button"
+                className={styles.readMoreButton}
+                onClick={() => setDescExpanded((v) => !v)}
+              >
+                {descExpanded ? 'Show less' : 'Read more'}
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
       {video.tags?.length > 0 && (
         <div className={styles.tagRow}>

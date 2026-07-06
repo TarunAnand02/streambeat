@@ -1,8 +1,10 @@
 import { z } from 'zod';
-import { CATEGORY_IDS } from '../constants/categories.js';
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid video id');
-const category = z.enum(CATEGORY_IDS).optional().default('other');
+// Format-level check only — actual existence against the Category
+// collection is checked in the controller (assertCategoryExists), since
+// categories can be created at runtime and zod schemas here are synchronous.
+const category = z.string().trim().min(1).max(40).optional().default('other');
 const collectionId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid collection id');
 const tagsArray = z.array(z.string().trim().min(1).max(30)).max(20).optional();
 const visibility = z.enum(['public', 'unlisted', 'private']).optional().default('public');
@@ -34,7 +36,7 @@ export const updateVideoSchema = z.object({
   body: z.object({
     title: z.string().trim().min(1).max(100).optional(),
     description: z.string().trim().max(5000).optional(),
-    category: z.enum(CATEGORY_IDS).optional(),
+    category: z.string().trim().min(1).max(40).optional(),
     tags: tagsArray,
     collections: z.array(collectionId).max(50).optional(),
     visibility: z.enum(['public', 'unlisted', 'private']).optional(),
@@ -71,7 +73,7 @@ export const listVideosSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(50).optional(),
-    category: z.enum(CATEGORY_IDS).optional(),
+    category: z.string().trim().min(1).optional(),
     tags: z
       .string()
       .trim()
@@ -89,7 +91,7 @@ export const searchSchema = z.object({
   body: z.any(),
   query: z.object({
     q: z.string().trim().min(1).max(200),
-    category: z.enum(CATEGORY_IDS).optional(),
+    category: z.string().trim().min(1).optional(),
     tags: z
       .string()
       .trim()

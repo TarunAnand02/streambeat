@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { categories } from './categories';
+import CategorySelect from './CategorySelect';
 import { importYoutubeVideo, previewYoutubeVideo } from './videosApi';
 import uploadStyles from './UploadPage.module.css';
 import styles from './ImportPage.module.css';
@@ -126,18 +126,12 @@ export default function ImportVideoForm() {
             <label className={uploadStyles.label} htmlFor="category">
               Category
             </label>
-            <select
+            <CategorySelect
               id="category"
               className={uploadStyles.input}
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.emoji} {cat.label}
-                </option>
-              ))}
-            </select>
+              onChange={setCategory}
+            />
           </div>
 
           <button className={uploadStyles.submit} type="submit" disabled={importing}>

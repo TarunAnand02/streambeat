@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { categories } from './categories';
+import CategorySelect from './CategorySelect';
 import { uploadVideo } from './videosApi';
 import styles from './UploadPage.module.css';
 
@@ -242,19 +242,12 @@ export default function UploadPage() {
                       onChange={(e) => updateItem(item.id, { title: e.target.value })}
                       aria-label="Title"
                     />
-                    <select
+                    <CategorySelect
                       className={styles.input}
                       value={item.category}
                       disabled={!editable}
-                      onChange={(e) => updateItem(item.id, { category: e.target.value })}
-                      aria-label="Category"
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.emoji} {cat.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => updateItem(item.id, { category: val })}
+                    />
                     <select
                       className={styles.input}
                       value={item.visibility}

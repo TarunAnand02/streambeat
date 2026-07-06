@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { formatDuration } from '../../lib/formatDuration';
-import { categories } from './categories';
+import CategorySelect from './CategorySelect';
 import { CheckIcon } from '../../components/ui/Icon';
 import { importYoutubeBatch, previewYoutubeChannel } from './videosApi';
 import uploadStyles from './UploadPage.module.css';
@@ -121,17 +121,11 @@ export default function ImportChannelForm() {
               Select all ({selected.size} of {videos.length} selected)
             </label>
 
-            <select
+            <CategorySelect
               className={styles.categorySelect}
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.emoji} {cat.label}
-                </option>
-              ))}
-            </select>
+              onChange={setCategory}
+            />
           </div>
 
           <div className={styles.grid}>

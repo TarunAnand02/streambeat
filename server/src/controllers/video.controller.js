@@ -11,6 +11,7 @@ import { ViewEvent } from '../models/ViewEvent.js';
 import { WatchHistory } from '../models/WatchHistory.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { assertCategoryExists } from './category.controller.js';
 import { createNotification } from './notification.controller.js';
 import {
   CAPTION_STORAGE_DIR,
@@ -62,6 +63,8 @@ export const createVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Thumbnail exceeds the 5MB size limit');
   }
 
+  await assertCategoryExists(req.body.category);
+
   const storageProvider = await persistUploadedFile(videoFile.path, videoFile.filename, videoFile.mimetype);
   if (thumbnailFile) {
     await persistUploadedFile(thumbnailFile.path, thumbnailFile.filename, thumbnailFile.mimetype);
@@ -87,6 +90,7 @@ export const createVideo = asyncHandler(async (req, res) => {
 });
 
 export const importFromUrl = asyncHandler(async (req, res) => {
+  await assertCategoryExists(req.body.category);
   const validatedUrl = await validateImportUrl(req.body.url);
   const { response, contentType } = await fetchAndValidateVideoResponse(validatedUrl);
 
@@ -357,7 +361,10 @@ export const updateVideo = asyncHandler(async (req, res) => {
 
   if (req.body.title !== undefined) video.title = req.body.title;
   if (req.body.description !== undefined) video.description = req.body.description;
-  if (req.body.category !== undefined) video.category = req.body.category;
+  if (req.body.category !== undefined) {
+    await assertCategoryExists(req.body.category);
+    video.category = req.body.category;
+  }
   if (req.body.tags !== undefined) video.tags = req.body.tags;
   if (req.body.visibility !== undefined) video.visibility = req.body.visibility;
 
@@ -736,6 +743,8 @@ export const importYoutubeVideo = asyncHandler(async (req, res) => {
   const { youtubeVideoId, title, description, category, thumbnailUrl, durationSeconds } =
     req.body;
 
+  await assertCategoryExists(category);
+
   const video = await Video.create({
     source: 'youtube',
     youtubeVideoId,
@@ -771,6 +780,8 @@ export const previewYoutubeChannel = asyncHandler(async (req, res) => {
 
 export const importYoutubeBatch = asyncHandler(async (req, res) => {
   const { category, videos } = req.body;
+
+  await assertCategoryExists(category);
 
   const docs = videos.map((v) => ({
     source: 'youtube',

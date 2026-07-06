@@ -72,6 +72,16 @@ export const oauthLimiter = rateLimit({
   message: { message: 'Too many attempts, please try again later.' },
 });
 
+// Guards against spamming new categories — a real user creating one while
+// uploading/importing a handful of videos never comes close to this.
+export const categoryLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many new categories, please try again later.' },
+});
+
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 20,

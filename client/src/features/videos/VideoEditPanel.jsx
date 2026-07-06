@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { categories } from './categories';
+import CategorySelect from './CategorySelect';
 import { CloseIcon } from '../../components/ui/Icon';
 import { fetchCollections } from '../collections/collectionsApi';
 import { thumbnailUrl, updateCaption, updateThumbnail, updateVideo } from './videosApi';
@@ -187,13 +187,7 @@ export default function VideoEditPanel({ video, onSaved }) {
 
       <div className={styles.section}>
         <div className={styles.sectionLabel}>Category</div>
-        <select className={styles.textInput} value={category} onChange={(e) => setCategory(e.target.value)}>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.emoji} {cat.label}
-            </option>
-          ))}
-        </select>
+        <CategorySelect className={styles.textInput} value={category} onChange={setCategory} />
       </div>
 
       <div className={styles.section}>

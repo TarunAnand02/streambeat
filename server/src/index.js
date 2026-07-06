@@ -1,6 +1,7 @@
 import { app } from './app.js';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
+import { seedCategories } from './utils/seedCategories.js';
 
 // Last-resort safety net: log and keep running rather than let one
 // unexpected rejection/exception silently kill the whole process (which
@@ -18,6 +19,7 @@ process.on('uncaughtException', (err) => {
 
 async function main() {
   await connectDB();
+  await seedCategories();
   app.listen(env.port, () => {
     console.log(`Server listening on http://localhost:${env.port}`);
   });

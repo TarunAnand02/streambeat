@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { CATEGORY_IDS } from '../constants/categories.js';
 
 const { Schema } = mongoose;
 
@@ -103,9 +102,11 @@ const videoSchema = new Schema(
       required: true,
       index: true,
     },
+    // No enum here — categories are DB-backed (see models/Category.js) and
+    // can be created at runtime, so existence is checked in the controller
+    // (assertCategoryExists) instead of a fixed schema-level list.
     category: {
       type: String,
-      enum: CATEGORY_IDS,
       default: 'other',
       index: true,
     },

@@ -10,6 +10,7 @@ import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import categoryRoutes from './routes/category.routes.js';
 import collectionRoutes from './routes/collection.routes.js';
 import commentRoutes from './routes/comment.routes.js';
 import helpRoutes from './routes/help.routes.js';
@@ -113,6 +114,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/help', helpRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Combined single-service deployment: if a client build sits alongside the
 // server (see server/README-deploy or the root render.yaml), serve it

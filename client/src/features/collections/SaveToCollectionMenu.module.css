@@ -130,3 +130,75 @@
 .item:hover {
   background: var(--color-surface-hover, rgba(255, 255, 255, 0.06));
 }
+
+.newCollectionButton {
+  width: 100%;
+  text-align: left;
+  margin-top: 6px;
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.newCollectionButton:hover {
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.06));
+}
+
+.createRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.createInput {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.createInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.createConfirm {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--color-accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.createConfirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.createCancel {
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.createCancel:hover {
+  color: var(--color-text);
+}

@@ -17,6 +17,21 @@ export default function ImportUrlForm() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+
+    // A YouTube page isn't a raw video file — fetching it here just gets
+    // blocked/rate-limited by YouTube as bot traffic. Catch it before it
+    // ever reaches the server and point people at the tab meant for this.
+    try {
+      const hostname = new URL(url).hostname;
+      if (/(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(hostname)) {
+        setError('That\'s a YouTube link — use the "YouTube video" tab above instead, not "From URL."');
+        return;
+      }
+    } catch {
+      // Not a parseable absolute URL — let the normal submit flow and
+      // server-side validation handle reporting that.
+    }
+
     setImporting(true);
     try {
       const video = await importFromUrl({ url, title, description, category });

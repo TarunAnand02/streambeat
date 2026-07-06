@@ -61,7 +61,17 @@ app.use(
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
         'frame-src': ["'self'", 'https://www.youtube.com'],
         'script-src': ["'self'", 'https://www.youtube.com'],
-        'img-src': ["'self'", 'data:', 'https://i.ytimg.com', ...(storageOrigin ? [storageOrigin] : [])],
+        // i.ytimg.com serves video thumbnails; yt3.ggpht.com (and its older
+        // yt3.googleusercontent.com alias) serves channel avatars/logos —
+        // two different YouTube CDN domains, both needed.
+        'img-src': [
+          "'self'",
+          'data:',
+          'https://i.ytimg.com',
+          'https://yt3.ggpht.com',
+          'https://yt3.googleusercontent.com',
+          ...(storageOrigin ? [storageOrigin] : []),
+        ],
         // blob: is needed for reading a locally-selected file's duration
         // client-side before upload (an off-DOM <video> loads a blob: URL
         // created from the File object) — not related to cloud storage.

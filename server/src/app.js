@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import collectionRoutes from './routes/collection.routes.js';
 import commentRoutes from './routes/comment.routes.js';
+import focusSessionRoutes from './routes/focusSession.routes.js';
 import helpRoutes from './routes/help.routes.js';
 import historyRoutes from './routes/history.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
@@ -120,6 +121,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/help', helpRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/focus-sessions', focusSessionRoutes);
 
 app.get('/robots.txt', getRobotsTxt);
 app.get('/sitemap.xml', getSitemap);

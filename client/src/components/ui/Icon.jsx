@@ -399,6 +399,24 @@ export function FlagIcon(props) {
   );
 }
 
+export function FlameIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 2c1 3-2.5 4.5-2.5 7.5A2.5 2.5 0 0 0 12 12a2.5 2.5 0 0 0 2.5-2.5c1.5 1 2.5 3 2.5 5A5 5 0 0 1 7 14.5C7 9.5 12 7.5 12 2Z" />
+    </svg>
+  );
+}
+
+export function TargetIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function BarChartSmallIcon(props) {
   return (
     <svg {...base} {...props}>

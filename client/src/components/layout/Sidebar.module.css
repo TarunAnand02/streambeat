@@ -80,6 +80,16 @@
   color: var(--color-accent);
 }
 
+.streakBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f97316;
+}
+
 .icon {
   font-size: 18px;
   width: 20px;

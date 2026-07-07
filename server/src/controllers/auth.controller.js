@@ -68,6 +68,7 @@ export function toPublicUser(user) {
     // uses this to skip asking for one on password-gated settings actions.
     hasPassword: Boolean(user.passwordHash),
     studyModeEnabled: user.studyModeEnabled,
+    focusStats: user.focusStats,
   };
 }
 

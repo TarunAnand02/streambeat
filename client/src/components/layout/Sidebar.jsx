@@ -11,6 +11,7 @@ import {
   ClockIcon,
   CloseIcon,
   FlagIcon,
+  FlameIcon,
   FocusIcon,
   FolderIcon,
   HelpIcon,
@@ -153,6 +154,11 @@ export default function Sidebar({ isOpen, onClose }) {
               <FocusIcon />
             </span>
             Study Mode
+            {user.focusStats?.currentStreak > 0 && (
+              <span className={styles.streakBadge}>
+                <FlameIcon /> {user.focusStats.currentStreak}
+              </span>
+            )}
           </button>
           {user.isAdmin && (
             <NavLink

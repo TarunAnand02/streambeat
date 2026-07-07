@@ -72,6 +72,19 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    // Forest-style focus streak, kept on the user doc since it's a small
+    // fixed-shape aggregate — the individual sessions it's derived from live
+    // in their own FocusSession collection.
+    focusStats: {
+      _id: false,
+      currentStreak: { type: Number, default: 0 },
+      longestStreak: { type: Number, default: 0 },
+      // YYYY-MM-DD (UTC) of the last day a session was logged — a plain date
+      // string sidesteps timezone-offset comparison bugs when checking
+      // "was that yesterday?".
+      lastFocusDate: { type: String, default: null },
+      totalFocusMinutes: { type: Number, default: 0 },
+    },
     // "Not interested" / "don't recommend this channel" — internal
     // recommendation-tuning state, never exposed to any other user, so kept
     // out of the default projection like the other select:false fields.

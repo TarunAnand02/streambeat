@@ -632,7 +632,7 @@ export default function WatchPage() {
         </div>
       )}
 
-      {studyMode && <FocusTimer videoId={videoId} />}
+      {studyMode && <FocusTimer videoId={videoId} playerRef={wrapperRef} />}
 
       {chapters.length > 0 && <Chapters chapters={chapters} onSeek={seekTo} />}
 

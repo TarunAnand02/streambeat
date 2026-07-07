@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDownIcon, CloseIcon, FlameIcon, TargetIcon, TimerIcon } from './ui/Icon';
 import { useToast } from './toast/ToastProvider';
 import { fetchFocusStats, postFocusSession } from '../features/focus/focusApi';
@@ -13,16 +13,40 @@ const BREAK_SECONDS = 5 * 60;
 const EYE_REST_INTERVAL_SECONDS = 20 * 60;
 const MIN_LOGGABLE_MINUTES = 1;
 
+const POSITION_STORAGE_KEY = 'focusTimerPosition';
+const DRAG_THRESHOLD_PX = 4;
+const OVERLAP_CHECK_INTERVAL_MS = 400;
+const OVERLAP_HIDE_DELAY_MS = 2000;
+
 function formatClock(totalSeconds) {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+function loadSavedPosition() {
+  try {
+    const raw = localStorage.getItem(POSITION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function rectsOverlap(a, b) {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function clampToViewport(x, y, width, height) {
+  const maxX = Math.max(4, window.innerWidth - width - 4);
+  const maxY = Math.max(4, window.innerHeight - height - 4);
+  return { x: Math.min(Math.max(4, x), maxX), y: Math.min(Math.max(4, y), maxY) };
+}
+
 // A Pomodoro-style focus HUD shown only in Study Mode. Tracks real elapsed
 // focus time (not just wall-clock session length) so pausing doesn't inflate
 // the minutes eventually logged to the server for streaks/recap.
-export default function FocusTimer({ videoId }) {
+export default function FocusTimer({ videoId, playerRef }) {
   const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [phase, setPhase] = useState('focus');
@@ -32,12 +56,19 @@ export default function FocusTimer({ videoId }) {
   const [sessionActive, setSessionActive] = useState(false);
   const [stats, setStats] = useState(null);
   const [recap, setRecap] = useState(null);
+  const [position, setPosition] = useState(loadSavedPosition);
+  const [isDragging, setIsDragging] = useState(false);
+  const [autoHidden, setAutoHidden] = useState(false);
   const showToast = useToast();
 
+  const rootRef = useRef(null);
   const intervalRef = useRef(null);
   const elapsedFocusSecondsRef = useRef(0);
   const goalRef = useRef('');
   const submittedRef = useRef(false);
+  const dragStateRef = useRef(null);
+  const justDraggedRef = useRef(false);
+  const overlapStartRef = useRef(null);
 
   useEffect(() => {
     goalRef.current = goal;
@@ -117,6 +148,145 @@ export default function FocusTimer({ videoId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, phase]);
 
+  // Drag-to-reposition — a pointerdown on any non-excluded part of the
+  // widget starts tracking; it only actually becomes a drag (and suppresses
+  // the underlying click, e.g. the pill's expand action) once the pointer
+  // has moved past a small threshold, so a plain click/tap still works.
+  // These three are wrapped in useCallback with no deps (they only ever
+  // touch refs and stable setState functions) so the exact same function
+  // reference is used for both addEventListener and removeEventListener —
+  // otherwise a stale closure from an earlier render would fail to detach.
+  const handleDragMove = useCallback((e) => {
+    const ds = dragStateRef.current;
+    if (!ds) return;
+    const dx = e.clientX - ds.startClientX;
+    const dy = e.clientY - ds.startClientY;
+    if (!ds.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+    ds.moved = true;
+    setIsDragging(true);
+
+    const el = rootRef.current;
+    setPosition(
+      clampToViewport(
+        e.clientX - ds.offsetX,
+        e.clientY - ds.offsetY,
+        el?.offsetWidth || 0,
+        el?.offsetHeight || 0
+      )
+    );
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    window.removeEventListener('pointermove', handleDragMove);
+    window.removeEventListener('pointerup', handleDragEnd);
+    const ds = dragStateRef.current;
+    if (ds?.moved) {
+      justDraggedRef.current = true;
+      setIsDragging(false);
+      setPosition((pos) => {
+        if (pos) {
+          try {
+            localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(pos));
+          } catch {
+            // best-effort — losing the saved position just means it resets next visit
+          }
+        }
+        return pos;
+      });
+    }
+    dragStateRef.current = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDragStart = useCallback(
+    (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      if (e.target.closest('[data-no-drag]')) return;
+      const el = rootRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      dragStateRef.current = {
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        moved: false,
+      };
+      window.addEventListener('pointermove', handleDragMove);
+      window.addEventListener('pointerup', handleDragEnd);
+    },
+    [handleDragMove, handleDragEnd]
+  );
+
+  // Defensive cleanup if the component unmounts mid-drag (e.g. navigating
+  // away) — without this, the window listeners above would outlive it.
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('pointermove', handleDragMove);
+      window.removeEventListener('pointerup', handleDragEnd);
+    };
+  }, [handleDragMove, handleDragEnd]);
+
+  function handlePillClick() {
+    if (justDraggedRef.current) {
+      justDraggedRef.current = false;
+      return;
+    }
+    setExpanded(true);
+  }
+
+  // The pill and the expanded panel are different sizes — re-clamp whenever
+  // switching between them so a position saved near an edge never leaves
+  // the wider/taller form hanging off-screen.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    setPosition((pos) =>
+      pos ? clampToViewport(pos.x, pos.y, el.offsetWidth, el.offsetHeight) : pos
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
+
+  // While a native <video> is actually playing, fade the widget out if it's
+  // been sitting on top of the player for a couple of seconds — it's meant
+  // to help you focus, not block the thing you're watching. Reappears the
+  // instant it's no longer overlapping (paused, dragged away, video ends).
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (isDragging) {
+        overlapStartRef.current = null;
+        return;
+      }
+      const playerEl = playerRef?.current;
+      const videoEl = document.querySelector('video');
+      const widgetEl = rootRef.current;
+      const isPlaying = videoEl && !videoEl.paused && !videoEl.ended;
+
+      if (!isPlaying || !playerEl || !widgetEl) {
+        overlapStartRef.current = null;
+        setAutoHidden(false);
+        return;
+      }
+
+      const overlapping = rectsOverlap(
+        widgetEl.getBoundingClientRect(),
+        playerEl.getBoundingClientRect()
+      );
+
+      if (!overlapping) {
+        overlapStartRef.current = null;
+        setAutoHidden(false);
+        return;
+      }
+
+      if (overlapStartRef.current === null) overlapStartRef.current = Date.now();
+      if (Date.now() - overlapStartRef.current >= OVERLAP_HIDE_DELAY_MS) {
+        setAutoHidden(true);
+      }
+    }, OVERLAP_CHECK_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [playerRef, isDragging]);
+
   function handleStart() {
     setSessionActive(true);
     setRecap(null);
@@ -158,12 +328,22 @@ export default function FocusTimer({ videoId }) {
 
   if (dismissed) return null;
 
+  const positionStyle = position
+    ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' }
+    : undefined;
+  const visibilityClass = autoHidden && !isDragging ? styles.autoHidden : '';
+
   const streak = stats?.currentStreak ?? 0;
 
   if (!expanded) {
     return (
-      <div className={styles.pill}>
-        <button type="button" className={styles.pillMain} onClick={() => setExpanded(true)}>
+      <div
+        ref={rootRef}
+        className={`${styles.pill} ${visibilityClass}`}
+        style={positionStyle}
+        onPointerDown={handleDragStart}
+      >
+        <button type="button" className={styles.pillMain} onClick={handlePillClick}>
           <FlameIcon className={styles.pillFlame} />
           <span>{streak}</span>
           {running && (
@@ -177,6 +357,7 @@ export default function FocusTimer({ videoId }) {
         <button
           type="button"
           className={styles.pillClose}
+          data-no-drag
           onClick={(e) => {
             e.stopPropagation();
             handleClose();
@@ -191,13 +372,17 @@ export default function FocusTimer({ videoId }) {
   }
 
   return (
-    <div className={styles.widget}>
-      <div className={styles.header}>
+    <div
+      ref={rootRef}
+      className={`${styles.widget} ${visibilityClass}`}
+      style={positionStyle}
+    >
+      <div className={styles.header} onPointerDown={handleDragStart}>
         <span className={styles.headerTitle}>
           <TimerIcon className={styles.headerIcon} />
           {phase === 'focus' ? 'Focus session' : 'Break'}
         </span>
-        <span className={styles.headerActions}>
+        <span className={styles.headerActions} data-no-drag>
           <button
             type="button"
             className={styles.collapseButton}

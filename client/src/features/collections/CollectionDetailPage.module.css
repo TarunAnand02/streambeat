@@ -376,3 +376,19 @@
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+.removeButton {
+  align-self: flex-start;
+  border: 1px solid var(--color-danger);
+  background: none;
+  color: var(--color-danger);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 12px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.removeButton:hover {
+  background: var(--color-danger);
+  color: #fff;
+}

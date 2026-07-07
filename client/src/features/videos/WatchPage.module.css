@@ -44,6 +44,46 @@
   margin-bottom: 16px;
 }
 
+.audioOnlyOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--color-surface);
+  /* Purely visual — native <video controls> lives on the same element right
+     underneath, so clicks must pass through to it, not this cover. */
+  pointer-events: none;
+}
+
+.audioOnlyThumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.25;
+  filter: blur(2px);
+}
+
+.audioOnlyIcon {
+  font-size: 40px;
+  color: var(--color-accent);
+  z-index: 1;
+}
+
+.audioOnlyTitle {
+  z-index: 1;
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 15px;
+  text-align: center;
+  padding: 0 24px;
+  max-width: 80%;
+}
+
 .resolutionRow {
   display: flex;
   align-items: center;
@@ -58,6 +98,11 @@
   background: var(--color-surface-raised);
   color: var(--color-text);
   font-size: 13px;
+}
+
+.sleepTimerActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .transcodeStatus {

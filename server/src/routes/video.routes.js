@@ -20,6 +20,7 @@ import {
   noteIdSchema,
   searchSchema,
   suggestSchema,
+  updateProgressSchema,
   updateVideoSchema,
   videoIdSchema,
   youtubeChannelPreviewSchema,
@@ -89,6 +90,19 @@ router.get('/:id/stream', validate(videoIdSchema), videoController.streamVideo);
 router.get('/:id/thumbnail', validate(videoIdSchema), videoController.getThumbnail);
 router.get('/:id/caption', validate(videoIdSchema), videoController.getCaption);
 router.post('/:id/view', optionalAuth, validate(videoIdSchema), videoController.incrementView);
+router.post('/:id/watch-later', protect, validate(videoIdSchema), videoController.addToWatchLater);
+router.delete(
+  '/:id/watch-later',
+  protect,
+  validate(videoIdSchema),
+  videoController.removeFromWatchLater
+);
+router.patch(
+  '/:id/progress',
+  optionalAuth,
+  validate(updateProgressSchema),
+  videoController.updateWatchProgress
+);
 router.post('/:id/like', protect, validate(videoIdSchema), videoController.toggleLike);
 router.post('/:id/notes', protect, validate(createNoteSchema), videoController.createNote);
 router.get('/:id/notes', protect, validate(videoIdSchema), videoController.listNotes);

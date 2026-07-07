@@ -82,6 +82,16 @@ export const categoryLimiter = rateLimit({
   message: { message: 'Too many new categories, please try again later.' },
 });
 
+// Guards against report-spamming a creator/video — a real user reporting a
+// handful of genuinely bad things never comes close to this.
+export const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many reports submitted, please try again later.' },
+});
+
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 20,

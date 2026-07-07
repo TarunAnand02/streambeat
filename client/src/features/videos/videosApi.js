@@ -17,7 +17,12 @@ export async function fetchVideos(page = 1, { category, minDuration, maxDuration
 
 export async function fetchVideo(id) {
   const { data } = await axiosClient.get(`/videos/${id}`);
-  return { ...data.video, subscriberCount: data.subscriberCount, isSubscribed: data.isSubscribed };
+  return {
+    ...data.video,
+    subscriberCount: data.subscriberCount,
+    isSubscribed: data.isSubscribed,
+    resumeAt: data.resumeAt,
+  };
 }
 
 export async function searchVideos(q, { category, minDuration, maxDuration, tags, collectionId } = {}) {
@@ -42,6 +47,14 @@ export async function suggestVideos(q) {
 export async function fetchRecommended() {
   const { data } = await axiosClient.get('/videos/recommended');
   return data.videos;
+}
+
+export async function markNotInterested(videoId) {
+  await axiosClient.post('/users/me/not-interested', { videoId });
+}
+
+export async function blockChannelRecommendations(channelId) {
+  await axiosClient.post('/users/me/block-channel', { channelId });
 }
 
 export async function fetchTrending() {
@@ -103,8 +116,20 @@ export async function toggleLikeVideo(id) {
   return data;
 }
 
+export async function addToWatchLater(id) {
+  await axiosClient.post(`/videos/${id}/watch-later`);
+}
+
+export async function removeFromWatchLater(id) {
+  await axiosClient.delete(`/videos/${id}/watch-later`);
+}
+
 export async function registerView(id) {
   await axiosClient.post(`/videos/${id}/view`);
+}
+
+export async function updateWatchProgress(id, positionSeconds, durationSeconds) {
+  await axiosClient.patch(`/videos/${id}/progress`, { positionSeconds, durationSeconds });
 }
 
 export async function previewYoutubeVideo(url) {

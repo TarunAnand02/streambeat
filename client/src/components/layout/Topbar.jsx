@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { logoutUser } from '../../features/auth/authSlice';
+import { logoutUser, switchAccount } from '../../features/auth/authSlice';
+import { useToast } from '../toast/ToastProvider';
 import { useAuth } from '../../hooks/useAuth';
 import NotificationsMenu from '../../features/notifications/NotificationsMenu';
 import { suggestVideos, thumbnailUrl } from '../../features/videos/videosApi';
@@ -18,7 +19,11 @@ export default function Topbar({ onMenuClick }) {
   const searchRef = useRef(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const showToast = useToast();
   const { user, isAuthenticated } = useAuth();
+  const otherAccounts = useSelector((state) =>
+    state.auth.accounts.filter((a) => a.id !== user?.id)
+  );
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -77,6 +82,19 @@ export default function Topbar({ onMenuClick }) {
     await dispatch(logoutUser());
     setMenuOpen(false);
     navigate('/login');
+  }
+
+  async function handleSwitchAccount(account) {
+    setMenuOpen(false);
+    const result = await dispatch(switchAccount(account.id));
+    if (switchAccount.fulfilled.match(result)) {
+      // Any page currently open may hold data scoped to the account we just
+      // left (e.g. Settings, a channel's own edit controls) — send to Home
+      // rather than risk stale owner-context sticking around in place.
+      navigate('/');
+    } else {
+      showToast(`Couldn't switch to ${account.username} — try logging in again`, { type: 'error' });
+    }
   }
 
   return (
@@ -142,6 +160,32 @@ export default function Topbar({ onMenuClick }) {
                 </button>
                 <button className={styles.menuItem} onClick={handleLogout}>
                   Log out
+                </button>
+
+                {otherAccounts.length > 0 && (
+                  <>
+                    <div className={styles.menuDivider} />
+                    <div className={styles.menuSectionLabel}>Switch account</div>
+                    {otherAccounts.map((account) => (
+                      <button
+                        key={account.id}
+                        className={styles.accountItem}
+                        onClick={() => handleSwitchAccount(account)}
+                      >
+                        <Avatar username={account.username} avatarUrl={account.avatarUrl} size={24} />
+                        {account.username}
+                      </button>
+                    ))}
+                  </>
+                )}
+                <button
+                  className={styles.menuItem}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    navigate('/login');
+                  }}
+                >
+                  + Add another account
                 </button>
               </div>
             )}

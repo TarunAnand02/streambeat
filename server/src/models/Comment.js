@@ -22,6 +22,12 @@ const commentSchema = new Schema(
       minlength: 1,
       maxlength: 1000,
     },
+    parent: {
+      type: Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true }
 );

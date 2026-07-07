@@ -130,3 +130,58 @@
 .deleteButton:hover {
   color: var(--color-danger);
 }
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.replyButton {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 0 0;
+}
+
+.replyButton:hover {
+  color: var(--color-text);
+}
+
+.replyForm {
+  margin-left: 48px;
+}
+
+.replyForm .form {
+  margin-bottom: 0;
+}
+
+.cancelReply {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 8px;
+}
+
+.cancelReply:hover {
+  color: var(--color-text);
+}
+
+.repliesList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-left: 48px;
+  border-left: 2px solid var(--color-border);
+  padding-left: 16px;
+}
+
+.reply .avatar {
+  width: 28px;
+  height: 28px;
+}

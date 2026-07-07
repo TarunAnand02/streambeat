@@ -21,6 +21,17 @@ const watchHistorySchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  // Powers "resume where you left off" and the "Continue Watching" row —
+  // durationSeconds is saved alongside so both can tell "just started" from
+  // "basically finished" without a separate lookup against the video.
+  positionSeconds: {
+    type: Number,
+    default: 0,
+  },
+  durationSeconds: {
+    type: Number,
+    default: null,
+  },
 });
 
 watchHistorySchema.index({ user: 1, video: 1 }, { unique: true });

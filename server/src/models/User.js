@@ -66,6 +66,27 @@ const userSchema = new Schema(
       maxlength: 300,
       default: '',
     },
+    // Distraction-free mode — persisted (not just a client toggle) so it
+    // follows the user across devices, same as any other preference.
+    studyModeEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    // "Not interested" / "don't recommend this channel" — internal
+    // recommendation-tuning state, never exposed to any other user, so kept
+    // out of the default projection like the other select:false fields.
+    notInterestedVideoIds: {
+      type: [Schema.Types.ObjectId],
+      ref: 'Video',
+      default: [],
+      select: false,
+    },
+    blockedChannelIds: {
+      type: [Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+      select: false,
+    },
     // Bumped on logout-all / password change to invalidate all outstanding
     // refresh tokens without needing a token blacklist collection.
     refreshTokenVersion: {

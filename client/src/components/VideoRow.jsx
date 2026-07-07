@@ -1,7 +1,7 @@
 import VideoCard from './VideoCard';
 import styles from './VideoRow.module.css';
 
-export default function VideoRow({ title, videos }) {
+export default function VideoRow({ title, videos, showFeedback, onFeedbackRemoved }) {
   if (!videos?.length) return null;
 
   return (
@@ -13,6 +13,8 @@ export default function VideoRow({ title, videos }) {
             key={video._id}
             video={video}
             style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
+            showFeedback={showFeedback}
+            onFeedbackRemoved={onFeedbackRemoved}
           />
         ))}
       </div>

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Chapters from '../../components/Chapters';
+import FocusTimer from '../../components/FocusTimer';
 import Spinner from '../../components/ui/Spinner';
 import Avatar from '../../components/ui/Avatar';
-import { ShareIcon, TheaterIcon, ThumbsUpIcon } from '../../components/ui/Icon';
+import { AudioIcon, FlagIcon, PipIcon, ShareIcon, TheaterIcon, ThumbsUpIcon } from '../../components/ui/Icon';
+import ReportModal from '../reports/ReportModal';
 import { useToast } from '../../components/toast/ToastProvider';
 import SaveToCollectionMenu from '../collections/SaveToCollectionMenu';
 import YoutubeEmbed from '../../components/YoutubeEmbed';
@@ -24,7 +26,9 @@ import {
   fetchVideo,
   registerView,
   streamUrl,
+  thumbnailUrl,
   toggleLikeVideo,
+  updateWatchProgress,
 } from './videosApi';
 import styles from './WatchPage.module.css';
 
@@ -46,6 +50,12 @@ export default function WatchPage() {
   const [subBusy, setSubBusy] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [theaterMode, setTheaterMode] = useState(false);
+  const studyMode = Boolean(user?.studyModeEnabled);
+  const [showCommentsInStudyMode, setShowCommentsInStudyMode] = useState(false);
+  const [sleepSelection, setSleepSelection] = useState('off');
+  const [sleepEndsAt, setSleepEndsAt] = useState(null);
+  const [audioOnly, setAudioOnly] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const videoRef = useRef(null);
   const youtubeRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -114,6 +124,10 @@ export default function WatchPage() {
         setVideo(data);
         setLikesCount(data.likesCount);
         setLiked(user ? data.likes?.includes(user.id) : false);
+        // Consumed by the native <video>'s onLoadedMetadata below; for a
+        // YouTube-sourced video, YoutubeEmbed's onReady callback seeks
+        // instead (the iframe player isn't ready this early).
+        if (data.resumeAt) resumeTimeRef.current = data.resumeAt;
         registerView(videoId).catch(() => {});
         setLoading(false);
       })
@@ -140,6 +154,29 @@ export default function WatchPage() {
     return () => clearInterval(timer);
   }, [video?.transcodeStatus, videoId]);
 
+  // Powers "resume where you left off" and the Home page's Continue
+  // Watching row — only logged-in viewers have anywhere to save this.
+  // Reported periodically rather than on every timeupdate tick (which fires
+  // several times a second) to avoid hammering the API.
+  useEffect(() => {
+    if (!user || !video) return;
+
+    function report() {
+      const position = getCurrentTime();
+      if (position < 3) return; // not worth persisting "basically zero"
+      updateWatchProgress(video._id, position, video.durationSeconds || undefined).catch(() => {});
+    }
+
+    const timer = setInterval(report, 10000);
+    window.addEventListener('beforeunload', report);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('beforeunload', report);
+      report();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, video?._id]);
+
   async function handleToggleSubscribe() {
     if (!user) return navigate('/login');
     setSubBusy(true);
@@ -165,6 +202,37 @@ export default function WatchPage() {
     setLiked(result.liked);
     setLikesCount(result.likesCount);
   }
+
+  async function handlePictureInPicture() {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (videoRef.current) {
+        await videoRef.current.requestPictureInPicture();
+      }
+    } catch {
+      showToast('Picture-in-picture is not available for this video', { type: 'error' });
+    }
+  }
+
+  function handleSleepChange(e) {
+    const val = e.target.value;
+    setSleepSelection(val);
+    setSleepEndsAt(val === 'off' ? null : Date.now() + Number(val) * 60 * 1000);
+  }
+
+  useEffect(() => {
+    if (!sleepEndsAt) return;
+    const timeout = setTimeout(() => {
+      if (video?.source === 'youtube') youtubeRef.current?.pause();
+      else videoRef.current?.pause();
+      setSleepEndsAt(null);
+      setSleepSelection('off');
+      showToast('Sleep timer ended — playback paused', { type: 'success' });
+    }, Math.max(sleepEndsAt - Date.now(), 0));
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sleepEndsAt]);
 
   async function handleShare() {
     try {
@@ -289,6 +357,12 @@ export default function WatchPage() {
             videoId={video.youtubeVideoId}
             title={video.title}
             onEnded={handleEnded}
+            onReady={() => {
+              if (resumeTimeRef.current) {
+                youtubeRef.current?.seekTo(resumeTimeRef.current);
+                resumeTimeRef.current = 0;
+              }
+            }}
           />
         </div>
       ) : (
@@ -315,6 +389,18 @@ export default function WatchPage() {
               <track kind="subtitles" src={captionUrl(video._id)} srcLang="en" label="English" default />
             )}
           </video>
+          {audioOnly && (
+            // Covers the video frame without pausing/hiding the underlying
+            // element — audio keeps playing exactly as before, only the
+            // picture is obscured.
+            <div className={styles.audioOnlyOverlay}>
+              {video.thumbnailFilename && (
+                <img className={styles.audioOnlyThumb} src={thumbnailUrl(video._id)} alt="" />
+              )}
+              <AudioIcon className={styles.audioOnlyIcon} />
+              <div className={styles.audioOnlyTitle}>{video.title}</div>
+            </div>
+          )}
         </div>
       )}
 
@@ -347,6 +433,45 @@ export default function WatchPage() {
         </select>
         {video.source === 'upload' && video.transcodeStatus === 'processing' && (
           <span className={styles.transcodeStatus}>Processing other qualities…</span>
+        )}
+        <select
+          className={
+            sleepSelection !== 'off'
+              ? `${styles.resolutionSelect} ${styles.sleepTimerActive}`
+              : styles.resolutionSelect
+          }
+          value={sleepSelection}
+          onChange={handleSleepChange}
+          aria-label="Sleep timer"
+          title="Pause playback automatically after a set time"
+        >
+          <option value="off">Sleep timer: Off</option>
+          <option value="10">Sleep in 10 min</option>
+          <option value="20">Sleep in 20 min</option>
+          <option value="30">Sleep in 30 min</option>
+          <option value="60">Sleep in 60 min</option>
+        </select>
+        {video.source === 'upload' && (
+          <button
+            type="button"
+            className={styles.theaterButton}
+            onClick={handlePictureInPicture}
+            title="Picture-in-picture"
+            aria-label="Toggle picture-in-picture"
+          >
+            <PipIcon />
+          </button>
+        )}
+        {video.source === 'upload' && (
+          <button
+            type="button"
+            className={audioOnly ? `${styles.theaterButton} ${styles.theaterButtonActive}` : styles.theaterButton}
+            onClick={() => setAudioOnly((v) => !v)}
+            title="Audio-only mode"
+            aria-label="Toggle audio-only mode"
+          >
+            <AudioIcon />
+          </button>
         )}
         <button
           type="button"
@@ -401,7 +526,17 @@ export default function WatchPage() {
             Delete
           </button>
         )}
+        {!isOwner && user && (
+          <button className={styles.pillButton} onClick={() => setReportOpen(true)}>
+            <FlagIcon className={styles.likeIcon} />
+            Report
+          </button>
+        )}
       </div>
+
+      {reportOpen && (
+        <ReportModal targetType="video" targetId={video._id} onClose={() => setReportOpen(false)} />
+      )}
 
       <div className={styles.descriptionBlock}>
         <div className={styles.descriptionMeta}>
@@ -435,6 +570,8 @@ export default function WatchPage() {
         </div>
       )}
 
+      {studyMode && <FocusTimer />}
+
       {chapters.length > 0 && <Chapters chapters={chapters} onSeek={seekTo} />}
 
       {isOwner && <VideoAnalyticsPanel videoId={videoId} />}
@@ -443,7 +580,17 @@ export default function WatchPage() {
 
       {user && <NotesPanel videoId={videoId} getCurrentTime={getCurrentTime} onSeek={seekTo} />}
 
-      <CommentList videoId={videoId} />
+      {studyMode && !showCommentsInStudyMode ? (
+        <button
+          type="button"
+          className={styles.readMoreButton}
+          onClick={() => setShowCommentsInStudyMode(true)}
+        >
+          Show comments
+        </button>
+      ) : (
+        <CommentList videoId={videoId} />
+      )}
       </div>
 
       {playlist && (

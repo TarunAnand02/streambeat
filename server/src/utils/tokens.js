@@ -43,7 +43,17 @@ export function verifyRefreshToken(token) {
   return jwt.verify(token, env.jwtRefreshSecret);
 }
 
-export const REFRESH_COOKIE_NAME = 'refreshToken';
+// One refresh cookie per account, not one for the whole browser — this is
+// what lets multiple accounts stay simultaneously signed in on the same
+// browser (the account switcher) rather than a second login silently
+// clobbering the first one's cookie. The userId is not secret (it's already
+// visible in the JWT payload and API responses), so using it directly as
+// part of the cookie name leaks nothing new.
+const REFRESH_COOKIE_PREFIX = 'rt_';
+
+export function refreshCookieName(userId) {
+  return `${REFRESH_COOKIE_PREFIX}${userId}`;
+}
 
 export const refreshCookieOptions = {
   httpOnly: true,

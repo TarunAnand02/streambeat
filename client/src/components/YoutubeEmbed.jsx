@@ -25,12 +25,14 @@ function loadYoutubeIframeApi() {
 // owner) — as opposed to transient errors worth just retrying.
 const UNPLAYABLE_ERROR_CODES = new Set([100, 101, 150]);
 
-const YoutubeEmbed = forwardRef(function YoutubeEmbed({ videoId, title, onEnded }, ref) {
+const YoutubeEmbed = forwardRef(function YoutubeEmbed({ videoId, title, onEnded, onReady }, ref) {
   const containerRef = useRef(null);
   const playerRef = useRef(null);
   const [failed, setFailed] = useState(false);
   const onEndedRef = useRef(onEnded);
   onEndedRef.current = onEnded;
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useImperativeHandle(ref, () => ({
     seekTo: (seconds) => playerRef.current?.seekTo?.(seconds, true),
@@ -63,6 +65,7 @@ const YoutubeEmbed = forwardRef(function YoutubeEmbed({ videoId, title, onEnded 
         videoId,
         playerVars: { rel: 0 },
         events: {
+          onReady: () => onReadyRef.current?.(),
           onError: (event) => {
             if (UNPLAYABLE_ERROR_CODES.has(event.data)) setFailed(true);
           },

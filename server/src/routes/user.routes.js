@@ -7,9 +7,12 @@ import { uploadLimiter } from '../middleware/rateLimiters.js';
 const router = Router();
 
 router.get('/me', protect, userController.getMe);
+router.get('/me/export', protect, userController.exportUserData);
 router.patch('/me', protect, userController.updateMe);
 router.put('/me/avatar', protect, uploadLimiter, uploadAvatar, userController.updateAvatar);
 router.delete('/me/avatar', protect, userController.deleteAvatar);
+router.post('/me/not-interested', protect, userController.markNotInterested);
+router.post('/me/block-channel', protect, userController.blockChannelRecommendations);
 router.get('/:id/channel', optionalAuth, userController.getChannel);
 router.get('/:id/avatar', userController.getAvatar);
 

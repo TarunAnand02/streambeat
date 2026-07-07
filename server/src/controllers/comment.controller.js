@@ -21,20 +21,41 @@ export const createComment = asyncHandler(async (req, res) => {
   if (!video) throw new ApiError(404, 'Video not found');
   assertViewable(video, req.userId);
 
+  let parent = null;
+  if (req.body.parentId) {
+    parent = await Comment.findOne({ _id: req.body.parentId, video: req.params.videoId });
+    if (!parent) throw new ApiError(404, 'Comment being replied to was not found');
+    if (parent.parent) {
+      // Replies are one level deep — a reply-to-a-reply attaches to the
+      // original top-level comment instead of building a deeper chain.
+      parent = await Comment.findById(parent.parent);
+    }
+  }
+
   const comment = await Comment.create({
     video: req.params.videoId,
     user: req.userId,
     text: req.body.text,
+    parent: parent?._id ?? null,
   });
   const populated = await comment.populate('user', 'username avatarUrl');
   res.status(201).json({ comment: populated });
 
-  createNotification({
-    recipient: video.uploader,
-    type: 'comment',
-    actor: req.userId,
-    video: req.params.videoId,
-  });
+  if (parent) {
+    createNotification({
+      recipient: parent.user,
+      type: 'reply',
+      actor: req.userId,
+      video: req.params.videoId,
+    });
+  } else {
+    createNotification({
+      recipient: video.uploader,
+      type: 'comment',
+      actor: req.userId,
+      video: req.params.videoId,
+    });
+  }
 });
 
 export const deleteComment = asyncHandler(async (req, res) => {
@@ -53,6 +74,7 @@ export const deleteComment = asyncHandler(async (req, res) => {
     }
   }
 
+  await Comment.deleteMany({ parent: comment._id });
   await comment.deleteOne();
   res.status(204).send();
 });

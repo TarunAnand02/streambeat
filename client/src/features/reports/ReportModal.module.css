@@ -1,0 +1,123 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.heading {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+.closeButton:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.reasonList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.reasonItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.reasonItem:hover {
+  background: var(--color-surface-hover);
+}
+
+.details {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 14px;
+}
+
+.details:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.submitButton {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  padding: 10px 18px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.cancelButton:hover {
+  color: var(--color-text);
+}

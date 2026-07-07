@@ -49,3 +49,15 @@ export async function fetchSessions() {
 export async function revokeSession(id) {
   await axiosClient.delete(`/auth/sessions/${id}`);
 }
+
+export async function exportUserData() {
+  const response = await axiosClient.get('/users/me/export', { responseType: 'blob' });
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'streambeat-data-export.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}

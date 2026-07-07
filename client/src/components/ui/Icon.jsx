@@ -340,6 +340,65 @@ export function ShareIcon(props) {
   );
 }
 
+export function FocusIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function TimerIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2.5 2.5" />
+      <path d="M9 2h6" />
+      <path d="M12 2v3" />
+    </svg>
+  );
+}
+
+export function AudioIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="7" cy="17" r="2.5" />
+      <circle cx="18" cy="15" r="2.5" />
+      <path d="M9.5 17V6l11-2v11" />
+    </svg>
+  );
+}
+
+export function PipIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <rect x="12" y="11" width="7" height="5" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function MoreIcon(props) {
+  return (
+    <svg {...base} {...props} fill="currentColor" stroke="none">
+      <circle cx="12" cy="5" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="12" cy="19" r="1.8" />
+    </svg>
+  );
+}
+
+export function FlagIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 3v18" />
+      <path d="M5 4h11l-2.5 4L16 12H5" />
+    </svg>
+  );
+}
+
 export function BarChartSmallIcon(props) {
   return (
     <svg {...base} {...props}>

@@ -11,6 +11,7 @@ export const store = configureStore({
 
 attachAuthInterceptor({
   getToken: () => store.getState().auth.accessToken,
+  getUserId: () => store.getState().auth.user?.id,
   refreshed: (data) => store.dispatch(setCredentials(data)),
   refreshFailed: () => store.dispatch(clearCredentials()),
 });

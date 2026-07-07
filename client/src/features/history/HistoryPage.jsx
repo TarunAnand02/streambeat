@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import VideoCard from '../../components/VideoCard';
 import Spinner from '../../components/ui/Spinner';
 import uploadStyles from '../videos/UploadPage.module.css';
-import { clearHistory, fetchHistory, removeHistoryEntry } from './historyApi';
+import { getCategory } from '../videos/categories';
+import { clearHistory, fetchHistory, fetchWeeklySummary, removeHistoryEntry } from './historyApi';
 import styles from './HistoryPage.module.css';
 
 export default function HistoryPage() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -16,6 +18,9 @@ export default function HistoryPage() {
         setVideos(data);
         setLoading(false);
       }
+    });
+    fetchWeeklySummary().then((data) => {
+      if (!cancelled) setSummary(data);
     });
     return () => {
       cancelled = true;
@@ -26,6 +31,7 @@ export default function HistoryPage() {
     if (!window.confirm('Clear your entire watch history? This cannot be undone.')) return;
     await clearHistory();
     setVideos([]);
+    setSummary({ totalMinutes: 0, videosWatched: 0, topCategory: null });
   }
 
   async function handleRemove(videoId) {
@@ -45,6 +51,27 @@ export default function HistoryPage() {
           </button>
         )}
       </div>
+
+      {summary && summary.videosWatched > 0 && (
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryStat}>
+            <span className={styles.summaryValue}>{summary.totalMinutes}</span>
+            <span className={styles.summaryLabel}>minutes this week</span>
+          </div>
+          <div className={styles.summaryStat}>
+            <span className={styles.summaryValue}>{summary.videosWatched}</span>
+            <span className={styles.summaryLabel}>videos watched</span>
+          </div>
+          {summary.topCategory && (
+            <div className={styles.summaryStat}>
+              <span className={styles.summaryValue}>
+                {getCategory(summary.topCategory)?.emoji} {getCategory(summary.topCategory)?.label}
+              </span>
+              <span className={styles.summaryLabel}>top category</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {videos.length === 0 ? (
         <p className={styles.empty}>Videos you watch will show up here.</p>

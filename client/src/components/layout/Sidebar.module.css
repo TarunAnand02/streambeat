@@ -62,6 +62,24 @@
   background: var(--color-surface-raised);
 }
 
+.toggleButton {
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.studyModeActive {
+  color: var(--color-accent);
+  background: var(--color-surface-raised);
+}
+
+.studyModeActive .icon {
+  color: var(--color-accent);
+}
+
 .icon {
   font-size: 18px;
   width: 20px;

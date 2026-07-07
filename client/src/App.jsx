@@ -22,10 +22,12 @@ const ChannelPage = lazy(() => import('./features/channel/ChannelPage'));
 const SubscriptionsPage = lazy(() => import('./features/channel/SubscriptionsPage'));
 const CollectionDetailPage = lazy(() => import('./features/collections/CollectionDetailPage'));
 const CollectionsPage = lazy(() => import('./features/collections/CollectionsPage'));
+const WatchLaterPage = lazy(() => import('./features/collections/WatchLaterPage'));
 const HelpPage = lazy(() => import('./features/help/HelpPage'));
 const HistoryPage = lazy(() => import('./features/history/HistoryPage'));
 const HomePage = lazy(() => import('./features/videos/HomePage'));
 const ImportPage = lazy(() => import('./features/videos/ImportPage'));
+const AdminReportsPage = lazy(() => import('./features/reports/AdminReportsPage'));
 const SearchResultsPage = lazy(() => import('./features/videos/SearchResultsPage'));
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
 const UploadPage = lazy(() => import('./features/videos/UploadPage'));
@@ -60,10 +62,12 @@ export default function App() {
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/import" element={<ImportPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
+            <Route path="/watch-later" element={<WatchLaterPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/admin/reports" element={<AdminReportsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

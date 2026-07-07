@@ -16,6 +16,7 @@ const router = Router();
 router.post('/', protect, validate(createCollectionSchema), collectionController.createCollection);
 router.get('/', protect, collectionController.listCollections);
 router.get('/channel/:userId', collectionController.listPublicCollections);
+router.get('/watch-later', protect, collectionController.getWatchLater);
 // optionalAuth (not protect) — a public collection must be viewable by
 // anyone, logged in or not, the same way a public video is.
 router.get('/:id', optionalAuth, validate(collectionIdSchema), collectionController.getCollection);

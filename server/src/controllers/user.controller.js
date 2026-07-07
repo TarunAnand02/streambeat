@@ -1,9 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import { Collection } from '../models/Collection.js';
 import { Comment } from '../models/Comment.js';
 import { Subscription } from '../models/Subscription.js';
 import { User } from '../models/User.js';
 import { Video } from '../models/Video.js';
+import { WatchHistory } from '../models/WatchHistory.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { toPublicUser } from './auth.controller.js';
@@ -17,6 +19,32 @@ export const getMe = asyncHandler(async (req, res) => {
   const user = await User.findById(req.userId).select('+passwordHash');
   if (!user) throw new ApiError(404, 'User not found');
   res.json({ user: toPublicUser(user) });
+});
+
+const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
+
+// Gives users real control over their own recommendations instead of just
+// feeding an opaque algorithm. $addToSet avoids growing the array on repeat
+// clicks for the same video.
+export const markNotInterested = asyncHandler(async (req, res) => {
+  const { videoId } = req.body;
+  if (!OBJECT_ID_RE.test(videoId || '')) throw new ApiError(400, 'Invalid video id');
+  await User.findByIdAndUpdate(req.userId, {
+    $addToSet: { notInterestedVideoIds: videoId },
+  });
+  res.status(204).send();
+});
+
+export const blockChannelRecommendations = asyncHandler(async (req, res) => {
+  const { channelId } = req.body;
+  if (!OBJECT_ID_RE.test(channelId || '')) throw new ApiError(400, 'Invalid channel id');
+  if (channelId === req.userId) {
+    throw new ApiError(400, "You can't block your own channel");
+  }
+  await User.findByIdAndUpdate(req.userId, {
+    $addToSet: { blockedChannelIds: channelId },
+  });
+  res.status(204).send();
 });
 
 export const getChannel = asyncHandler(async (req, res) => {
@@ -79,14 +107,53 @@ export const getChannel = asyncHandler(async (req, res) => {
   });
 });
 
+// Everything a user has created or accumulated, bundled as a single
+// downloadable JSON file — deliberately excludes secrets (passwordHash,
+// tokens) since toPublicUser already strips those.
+export const exportUserData = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.userId).select('+passwordHash');
+  if (!user) throw new ApiError(404, 'User not found');
+
+  const [videos, collections, comments, subscriptions, watchHistory] = await Promise.all([
+    Video.find({ uploader: req.userId }).lean(),
+    Collection.find({ owner: req.userId }).lean(),
+    Comment.find({ user: req.userId }).lean(),
+    Subscription.find({ subscriber: req.userId }).populate('channel', 'username').lean(),
+    WatchHistory.find({ user: req.userId }).populate('video', 'title').lean(),
+  ]);
+
+  res.setHeader('Content-Disposition', 'attachment; filename="streambeat-data-export.json"');
+  res.json({
+    exportedAt: new Date().toISOString(),
+    profile: toPublicUser(user),
+    videos,
+    collections,
+    comments,
+    subscriptions: subscriptions.map((s) => ({
+      channel: s.channel?.username ?? null,
+      subscribedAt: s.createdAt,
+    })),
+    watchHistory: watchHistory.map((h) => ({
+      video: h.video?.title ?? null,
+      watchedAt: h.watchedAt,
+      positionSeconds: h.positionSeconds,
+    })),
+  });
+});
+
 export const updateMe = asyncHandler(async (req, res) => {
   // Avatar changes go exclusively through updateAvatar/deleteAvatar below,
   // which keep avatarUrl in sync with avatarFilename/avatarStorageProvider —
   // accepting an arbitrary avatarUrl here would let the two drift apart.
-  const { bio } = req.body;
+  const { bio, studyModeEnabled } = req.body;
   const user = await User.findByIdAndUpdate(
     req.userId,
-    { $set: { ...(bio !== undefined && { bio }) } },
+    {
+      $set: {
+        ...(bio !== undefined && { bio }),
+        ...(studyModeEnabled !== undefined && { studyModeEnabled }),
+      },
+    },
     { new: true, runValidators: true, select: '+passwordHash' }
   );
   if (!user) throw new ApiError(404, 'User not found');

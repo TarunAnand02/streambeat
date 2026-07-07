@@ -1,11 +1,17 @@
 import { NavLink } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { useAuth } from '../../hooks/useAuth';
+import { updateUser } from '../../features/auth/authSlice';
+import { updateProfile } from '../../features/settings/settingsApi';
+import { useToast } from '../toast/ToastProvider';
 import {
   BellIcon,
   ChannelIcon,
   ChartIcon,
   ClockIcon,
   CloseIcon,
+  FlagIcon,
+  FocusIcon,
   FolderIcon,
   HelpIcon,
   HomeIcon,
@@ -24,6 +30,19 @@ const navItems = [
 
 export default function Sidebar({ isOpen, onClose }) {
   const { user, isAuthenticated } = useAuth();
+  const dispatch = useDispatch();
+  const showToast = useToast();
+
+  async function handleToggleStudyMode() {
+    const next = !user.studyModeEnabled;
+    dispatch(updateUser({ ...user, studyModeEnabled: next }));
+    try {
+      await updateProfile({ studyModeEnabled: next });
+    } catch {
+      dispatch(updateUser({ ...user, studyModeEnabled: !next }));
+      showToast('Could not update Study Mode', { type: 'error' });
+    }
+  }
 
   return (
     <aside className={isOpen ? `${styles.sidebar} ${styles.open}` : styles.sidebar}>
@@ -69,6 +88,17 @@ export default function Sidebar({ isOpen, onClose }) {
               Your Channel
             </NavLink>
             <NavLink
+              to="/watch-later"
+              className={({ isActive }) =>
+                isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+              }
+            >
+              <span className={styles.icon}>
+                <ClockIcon />
+              </span>
+              Watch Later
+            </NavLink>
+            <NavLink
               to="/collections"
               className={({ isActive }) =>
                 isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
@@ -106,6 +136,39 @@ export default function Sidebar({ isOpen, onClose }) {
           <p className={styles.hint}>Log in to see your channel</p>
         )}
       </div>
+
+      {isAuthenticated && (
+        <div className={styles.section}>
+          <button
+            type="button"
+            className={
+              user.studyModeEnabled
+                ? `${styles.navItem} ${styles.toggleButton} ${styles.studyModeActive}`
+                : `${styles.navItem} ${styles.toggleButton}`
+            }
+            onClick={handleToggleStudyMode}
+            title="Hide recommendations/trending for distraction-free viewing"
+          >
+            <span className={styles.icon}>
+              <FocusIcon />
+            </span>
+            Study Mode
+          </button>
+          {user.isAdmin && (
+            <NavLink
+              to="/admin/reports"
+              className={({ isActive }) =>
+                isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+              }
+            >
+              <span className={styles.icon}>
+                <FlagIcon />
+              </span>
+              Reports
+            </NavLink>
+          )}
+        </div>
+      )}
 
       <div className={styles.spacer} />
 

@@ -21,6 +21,30 @@ async function assertOwnedParent(parentId, userId) {
   if (!parent) throw new ApiError(400, 'That parent folder is not accessible to you');
 }
 
+// Finds this user's one auto-created Watch Later collection, creating it on
+// first use — the client never needs to know its id upfront, just that
+// "Watch Later" exists as a concept.
+export async function findOrCreateWatchLater(userId) {
+  let collection = await Collection.findOne({ owner: userId, isWatchLater: true });
+  if (!collection) {
+    collection = await Collection.create({
+      name: 'Watch Later',
+      owner: userId,
+      visibility: 'private',
+      isWatchLater: true,
+    });
+  }
+  return collection;
+}
+
+export const getWatchLater = asyncHandler(async (req, res) => {
+  const collection = await findOrCreateWatchLater(req.userId);
+  const videos = await Video.find({ collections: collection._id })
+    .sort({ createdAt: -1 })
+    .populate('uploader', 'username avatarUrl');
+  res.json({ collection, videos, role: 'owner' });
+});
+
 export const createCollection = asyncHandler(async (req, res) => {
   await assertOwnedParent(req.body.parent, req.userId);
 

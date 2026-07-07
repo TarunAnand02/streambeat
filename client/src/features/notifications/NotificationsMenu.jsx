@@ -31,6 +31,13 @@ function describe(n) {
           <strong>{n.actor?.username}</strong> liked <strong>{n.video?.title}</strong>
         </>
       );
+    case 'reply':
+      return (
+        <>
+          <strong>{n.actor?.username}</strong> replied to your comment on{' '}
+          <strong>{n.video?.title}</strong>
+        </>
+      );
     default:
       return 'New notification';
   }

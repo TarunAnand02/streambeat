@@ -8,7 +8,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { isMailerConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../utils/mailer.js';
 import {
-  REFRESH_COOKIE_NAME,
+  refreshCookieName,
   refreshCookieOptions,
   sign2faPendingToken,
   signAccessToken,
@@ -50,7 +50,7 @@ export async function issueSession(req, res, user) {
     ip: req.ip || '',
   });
 
-  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
+  res.cookie(refreshCookieName(user._id), refreshToken, refreshCookieOptions);
   return accessToken;
 }
 
@@ -67,6 +67,7 @@ export function toPublicUser(user) {
     // Google/GitHub-only accounts never set a local password — the client
     // uses this to skip asking for one on password-gated settings actions.
     hasPassword: Boolean(user.passwordHash),
+    studyModeEnabled: user.studyModeEnabled,
   };
 }
 
@@ -280,7 +281,11 @@ export const disable2fa = asyncHandler(async (req, res) => {
 });
 
 export const refresh = asyncHandler(async (req, res) => {
-  const token = req.cookies?.[REFRESH_COOKIE_NAME];
+  // Which account to refresh — each has its own cookie (see refreshCookieName),
+  // so this browser can hold several simultaneously signed-in accounts and
+  // the account switcher just calls this again with a different userId.
+  const { userId } = req.body;
+  const token = req.cookies?.[refreshCookieName(userId)];
   if (!token) {
     throw new ApiError(401, 'No refresh token provided');
   }
@@ -289,6 +294,13 @@ export const refresh = asyncHandler(async (req, res) => {
   try {
     payload = verifyRefreshToken(token);
   } catch {
+    throw new ApiError(401, 'Invalid or expired refresh token');
+  }
+
+  // The cookie name is trusted to select which token to read, but the token
+  // itself is the actual source of truth for identity — confirm they agree
+  // rather than assuming the requested userId is who this token is for.
+  if (payload.sub !== userId) {
     throw new ApiError(401, 'Invalid or expired refresh token');
   }
 
@@ -316,12 +328,16 @@ export const refresh = asyncHandler(async (req, res) => {
     await session.save();
   }
 
-  res.cookie(REFRESH_COOKIE_NAME, newRefreshToken, refreshCookieOptions);
+  res.cookie(refreshCookieName(user._id), newRefreshToken, refreshCookieOptions);
   res.json({ user: toPublicUser(user), accessToken });
 });
 
 export const logout = asyncHandler(async (req, res) => {
-  const token = req.cookies?.[REFRESH_COOKIE_NAME];
+  // Signs out one account (whichever the client says is active) — other
+  // accounts' cookies in this same browser are untouched.
+  const { userId } = req.body;
+  const cookieName = refreshCookieName(userId);
+  const token = req.cookies?.[cookieName];
   if (token) {
     try {
       const payload = verifyRefreshToken(token);
@@ -330,19 +346,19 @@ export const logout = asyncHandler(async (req, res) => {
       // an already-invalid token has nothing to clean up
     }
   }
-  res.clearCookie(REFRESH_COOKIE_NAME, { path: refreshCookieOptions.path });
+  res.clearCookie(cookieName, { path: refreshCookieOptions.path });
   res.status(204).send();
 });
 
 export const logoutAll = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(req.userId, { $inc: { refreshTokenVersion: 1 } });
   await Session.deleteMany({ user: req.userId });
-  res.clearCookie(REFRESH_COOKIE_NAME, { path: refreshCookieOptions.path });
+  res.clearCookie(refreshCookieName(req.userId), { path: refreshCookieOptions.path });
   res.status(204).send();
 });
 
 export const listSessions = asyncHandler(async (req, res) => {
-  const currentToken = req.cookies?.[REFRESH_COOKIE_NAME];
+  const currentToken = req.cookies?.[refreshCookieName(req.userId)];
   let currentJti = null;
   if (currentToken) {
     try {

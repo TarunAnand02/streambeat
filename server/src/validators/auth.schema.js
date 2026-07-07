@@ -94,6 +94,23 @@ export const disable2faSchema = z.object({
   params: z.any(),
 });
 
+const accountId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid account id');
+
+// Which account's own refresh cookie to read/clear — see refreshCookieName
+// in utils/tokens.js. Required now that a browser can hold several
+// simultaneously signed-in accounts (the account switcher).
+export const refreshSchema = z.object({
+  body: z.object({ userId: accountId }),
+  query: z.any(),
+  params: z.any(),
+});
+
+export const logoutSchema = z.object({
+  body: z.object({ userId: accountId }),
+  query: z.any(),
+  params: z.any(),
+});
+
 export const sessionIdSchema = z.object({
   body: z.any(),
   query: z.any(),

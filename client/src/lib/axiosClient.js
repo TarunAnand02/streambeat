@@ -10,11 +10,13 @@ export const axiosClient = axios.create({
 // current access token and dispatch on refresh failure without a circular
 // import between this module and the auth slice.
 let getAccessToken = () => null;
+let getActiveUserId = () => null;
 let onRefreshed = () => {};
 let onRefreshFailed = () => {};
 
-export function attachAuthInterceptor({ getToken, refreshed, refreshFailed }) {
+export function attachAuthInterceptor({ getToken, getUserId, refreshed, refreshFailed }) {
   getAccessToken = getToken;
+  getActiveUserId = getUserId;
   onRefreshed = refreshed;
   onRefreshFailed = refreshFailed;
 }
@@ -36,12 +38,16 @@ axiosClient.interceptors.response.use(
     if (response?.status !== 401 || config._retried || config.url?.includes('/auth/')) {
       return Promise.reject(error);
     }
+    const userId = getActiveUserId();
+    if (!userId) {
+      return Promise.reject(error);
+    }
     config._retried = true;
 
     try {
       refreshPromise =
         refreshPromise ||
-        axiosClient.post('/auth/refresh').finally(() => {
+        axiosClient.post('/auth/refresh', { userId }).finally(() => {
           refreshPromise = null;
         });
       const { data } = await refreshPromise;

@@ -9,6 +9,8 @@ const router = Router();
 router.use(protect);
 
 router.get('/', historyController.listHistory);
+router.get('/continue-watching', historyController.getContinueWatching);
+router.get('/weekly-summary', historyController.getWeeklySummary);
 router.delete('/', historyController.clearHistory);
 router.delete('/:videoId', validate(historyVideoIdSchema), historyController.removeHistoryEntry);
 

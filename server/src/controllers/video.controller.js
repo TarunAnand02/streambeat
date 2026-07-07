@@ -6,12 +6,14 @@ import { Collection } from '../models/Collection.js';
 import { Comment } from '../models/Comment.js';
 import { Note } from '../models/Note.js';
 import { Subscription } from '../models/Subscription.js';
+import { User } from '../models/User.js';
 import { Video } from '../models/Video.js';
 import { ViewEvent } from '../models/ViewEvent.js';
 import { WatchHistory } from '../models/WatchHistory.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { assertCategoryExists } from './category.controller.js';
+import { findOrCreateWatchLater } from './collection.controller.js';
 import { createNotification } from './notification.controller.js';
 import {
   CAPTION_STORAGE_DIR,
@@ -200,7 +202,54 @@ export const getVideo = asyncHandler(async (req, res) => {
     ? Boolean(await Subscription.exists({ subscriber: req.userId, channel: video.uploader._id }))
     : false;
 
-  res.json({ video, subscriberCount, isSubscribed });
+  // Resume-from-last-position — only offered if they got some way in and
+  // haven't essentially finished it already (near the end just restarts).
+  let resumeAt = 0;
+  if (req.userId) {
+    const historyEntry = await WatchHistory.findOne({ user: req.userId, video: video._id }).select(
+      'positionSeconds durationSeconds'
+    );
+    const pastIntro = historyEntry?.positionSeconds > 5;
+    const notNearlyDone =
+      !historyEntry?.durationSeconds || historyEntry.positionSeconds < historyEntry.durationSeconds * 0.95;
+    if (pastIntro && notNearlyDone) {
+      resumeAt = historyEntry.positionSeconds;
+    }
+  }
+
+  res.json({ video, subscriberCount, isSubscribed, resumeAt });
+});
+
+// Called periodically while playing (and on pause/unload) — separate from
+// incrementView, which fires once per view to bump the counter. Silently a
+// no-op for logged-out viewers; there's no per-user row to save this to.
+export const updateWatchProgress = asyncHandler(async (req, res) => {
+  if (!req.userId) return res.status(204).send();
+  const { positionSeconds, durationSeconds } = req.body;
+  await WatchHistory.findOneAndUpdate(
+    { user: req.userId, video: req.params.id },
+    { positionSeconds, ...(durationSeconds && { durationSeconds }), watchedAt: new Date() },
+    { upsert: true }
+  );
+  res.status(204).send();
+});
+
+// One-click "save for later" — always the same auto-created collection, so
+// the client never needs to know a collection id to use this.
+export const addToWatchLater = asyncHandler(async (req, res) => {
+  const video = await Video.findById(req.params.id);
+  if (!video) throw new ApiError(404, 'Video not found');
+  assertViewable(video, req.userId);
+
+  const watchLater = await findOrCreateWatchLater(req.userId);
+  await Video.updateOne({ _id: video._id }, { $addToSet: { collections: watchLater._id } });
+  res.status(204).send();
+});
+
+export const removeFromWatchLater = asyncHandler(async (req, res) => {
+  const watchLater = await findOrCreateWatchLater(req.userId);
+  await Video.updateOne({ _id: req.params.id }, { $pull: { collections: watchLater._id } });
+  res.status(204).send();
 });
 
 export const incrementView = asyncHandler(async (req, res) => {
@@ -710,6 +759,13 @@ export const getRecommended = asyncHandler(async (req, res) => {
     return res.json({ videos: trending });
   }
 
+  // "Not interested" / "don't recommend this channel" — user-driven
+  // recommendation tuning, applied to every branch below so it isn't
+  // silently ignored on the cold-start (no-history) path.
+  const me = await User.findById(req.userId).select('notInterestedVideoIds blockedChannelIds').lean();
+  const excludedUploaders = [req.userId, ...(me?.blockedChannelIds || [])];
+  const excludedVideos = me?.notInterestedVideoIds || [];
+
   const history = await WatchHistory.find({ user: req.userId })
     .sort({ watchedAt: -1 })
     .limit(50)
@@ -719,7 +775,11 @@ export const getRecommended = asyncHandler(async (req, res) => {
   const watchedIds = history.map((h) => h.video?._id).filter(Boolean);
 
   if (watchedIds.length === 0) {
-    const trending = await Video.find({ uploader: { $ne: req.userId }, visibility: 'public' })
+    const trending = await Video.find({
+      uploader: { $nin: excludedUploaders },
+      _id: { $nin: excludedVideos },
+      visibility: 'public',
+    })
       .sort({ views: -1 })
       .limit(RECOMMENDATION_LIMIT)
       .populate('uploader', 'username avatarUrl')
@@ -738,8 +798,8 @@ export const getRecommended = asyncHandler(async (req, res) => {
   }
 
   const candidates = await Video.find({
-    _id: { $nin: watchedIds },
-    uploader: { $ne: req.userId },
+    _id: { $nin: [...watchedIds, ...excludedVideos] },
+    uploader: { $nin: excludedUploaders },
     visibility: 'public',
   })
     .sort({ createdAt: -1 })

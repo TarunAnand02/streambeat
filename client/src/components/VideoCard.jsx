@@ -1,9 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { CheckIcon, FilmIcon, PlayIcon } from './ui/Icon';
 import { useHoverPreview } from '../hooks/useHoverPreview';
+import { useAuth } from '../hooks/useAuth';
 import { formatDuration, formatViews, timeAgo } from '../lib/formatDuration';
 import { getCategory } from '../features/videos/categories';
 import SaveToCollectionMenu from '../features/collections/SaveToCollectionMenu';
+import RecommendationFeedbackMenu from '../features/videos/RecommendationFeedbackMenu';
+import WatchLaterButton from '../features/videos/WatchLaterButton';
 import { streamUrl, thumbnailUrl } from '../features/videos/videosApi';
 import styles from './VideoCard.module.css';
 
@@ -16,8 +19,11 @@ export default function VideoCard({
   playlistId,
   showSaveTo,
   onVideoUpdated,
+  showFeedback,
+  onFeedbackRemoved,
 }) {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { previewing, onMouseEnter, onMouseLeave } = useHoverPreview();
   const category = getCategory(video.category);
   const isYoutube = video.source === 'youtube';
@@ -86,6 +92,15 @@ export default function VideoCard({
             {video.visibility === 'private' ? 'Private' : 'Unlisted'}
           </span>
         )}
+        {typeof video.progressPercent === 'number' && (
+          <div className={styles.progressTrack}>
+            <div className={styles.progressFill} style={{ width: `${video.progressPercent}%` }} />
+          </div>
+        )}
+        {showFeedback && !selectable && (
+          <RecommendationFeedbackMenu video={video} onRemoved={onFeedbackRemoved} />
+        )}
+        {isAuthenticated && !selectable && <WatchLaterButton videoId={video._id} />}
         {selectable ? (
           <span className={styles.checkbox}>{selected ? <CheckIcon /> : ''}</span>
         ) : (

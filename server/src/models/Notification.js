@@ -12,7 +12,7 @@ const notificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ['subscribe', 'comment', 'like'],
+      enum: ['subscribe', 'comment', 'like', 'reply'],
       required: true,
     },
     actor: {

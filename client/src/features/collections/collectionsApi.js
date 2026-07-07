@@ -15,6 +15,11 @@ export async function fetchPublicCollections(userId) {
   return data.collections;
 }
 
+export async function fetchWatchLater() {
+  const { data } = await axiosClient.get('/collections/watch-later');
+  return data;
+}
+
 export async function createCollection({ name, description, parent }) {
   const { data } = await axiosClient.post('/collections', { name, description, parent: parent || undefined });
   return data.collection;

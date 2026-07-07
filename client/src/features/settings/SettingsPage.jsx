@@ -4,7 +4,7 @@ import { setCredentials, updateUser } from '../auth/authSlice';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/toast/ToastProvider';
 import Avatar from '../../components/ui/Avatar';
-import { changePassword, deleteAvatar, updateProfile, uploadAvatar } from './settingsApi';
+import { changePassword, deleteAvatar, exportUserData, updateProfile, uploadAvatar } from './settingsApi';
 import PasswordInput from '../../components/ui/PasswordInput';
 import AppearanceSection from './AppearanceSection';
 import SessionsSection from './SessionsSection';
@@ -31,6 +31,8 @@ export default function SettingsPage() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
   const [passwordError, setPasswordError] = useState(null);
+
+  const [exporting, setExporting] = useState(false);
 
   async function handleProfileSubmit(e) {
     e.preventDefault();
@@ -78,6 +80,17 @@ export default function SettingsPage() {
       showToast(err.response?.data?.message || 'Could not remove photo', { type: 'error' });
     } finally {
       setAvatarBusy(false);
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await exportUserData();
+    } catch {
+      showToast('Could not export your data', { type: 'error' });
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -225,6 +238,22 @@ export default function SettingsPage() {
             password?" on the login page if you'd like to set one.
           </p>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionHeading}>Your data</h2>
+        <p className={styles.hint}>
+          Download a copy of your profile, videos, collections, comments, subscriptions, and
+          watch history as a JSON file.
+        </p>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          disabled={exporting}
+          onClick={handleExport}
+        >
+          {exporting ? 'Preparing…' : 'Download my data'}
+        </button>
       </section>
 
       <TwoFactorSection />

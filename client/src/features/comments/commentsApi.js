@@ -5,8 +5,8 @@ export async function fetchComments(videoId) {
   return data.comments;
 }
 
-export async function postComment(videoId, text) {
-  const { data } = await axiosClient.post(`/comments/video/${videoId}`, { text });
+export async function postComment(videoId, text, parentId) {
+  const { data } = await axiosClient.post(`/comments/video/${videoId}`, { text, parentId });
   return data.comment;
 }
 

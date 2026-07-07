@@ -53,6 +53,13 @@ const collectionSchema = new Schema(
     // collection are just ignored, and new members without a saved position
     // render after the ordered ones.
     videoOrder: [{ type: Schema.Types.ObjectId, ref: 'Video' }],
+    // Marks the one auto-created "Watch Later" collection per user (find-or
+    // -create'd the first time it's needed) — lets the quick-add button work
+    // without the client ever needing to know that collection's id upfront.
+    isWatchLater: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

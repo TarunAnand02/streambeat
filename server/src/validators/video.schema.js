@@ -51,6 +51,15 @@ export const videoIdSchema = z.object({
   params: z.object({ id: objectId }),
 });
 
+export const updateProgressSchema = z.object({
+  body: z.object({
+    positionSeconds: z.coerce.number().min(0),
+    durationSeconds: z.coerce.number().positive().optional(),
+  }),
+  query: z.any(),
+  params: z.object({ id: objectId }),
+});
+
 const noteId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid note id');
 
 export const createNoteSchema = z.object({

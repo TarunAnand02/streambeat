@@ -16,6 +16,7 @@ import commentRoutes from './routes/comment.routes.js';
 import helpRoutes from './routes/help.routes.js';
 import historyRoutes from './routes/history.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import reportRoutes from './routes/report.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import userRoutes from './routes/user.routes.js';
 import videoRoutes from './routes/video.routes.js';
@@ -118,6 +119,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/help', helpRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.get('/robots.txt', getRobotsTxt);
 app.get('/sitemap.xml', getSitemap);

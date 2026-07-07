@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDownIcon, CloseIcon, FlameIcon, TargetIcon, TimerIcon } from './ui/Icon';
 import { useToast } from './toast/ToastProvider';
 import { fetchFocusStats, postFocusSession } from '../features/focus/focusApi';
@@ -152,11 +152,28 @@ export default function FocusTimer({ videoId, playerRef }) {
   // widget starts tracking; it only actually becomes a drag (and suppresses
   // the underlying click, e.g. the pill's expand action) once the pointer
   // has moved past a small threshold, so a plain click/tap still works.
-  // These three are wrapped in useCallback with no deps (they only ever
-  // touch refs and stable setState functions) so the exact same function
-  // reference is used for both addEventListener and removeEventListener —
-  // otherwise a stale closure from an earlier render would fail to detach.
-  const handleDragMove = useCallback((e) => {
+  // Uses native pointer capture on the element that received the
+  // pointerdown (rather than window-level listeners) — the browser then
+  // keeps routing move/up events to that same element even if the pointer
+  // ends up outside its bounds mid-drag, which window listeners don't
+  // guarantee in every case (e.g. iframes, fast pointer movement).
+  function handlePointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    if (e.target.closest('[data-no-drag]')) return;
+    const el = rootRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragStateRef.current = {
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      moved: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handlePointerMove(e) {
     const ds = dragStateRef.current;
     if (!ds) return;
     const dx = e.clientX - ds.startClientX;
@@ -174,11 +191,12 @@ export default function FocusTimer({ videoId, playerRef }) {
         el?.offsetHeight || 0
       )
     );
-  }, []);
+  }
 
-  const handleDragEnd = useCallback(() => {
-    window.removeEventListener('pointermove', handleDragMove);
-    window.removeEventListener('pointerup', handleDragEnd);
+  function handlePointerUp(e) {
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
     const ds = dragStateRef.current;
     if (ds?.moved) {
       justDraggedRef.current = true;
@@ -195,37 +213,7 @@ export default function FocusTimer({ videoId, playerRef }) {
       });
     }
     dragStateRef.current = null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleDragStart = useCallback(
-    (e) => {
-      if (e.button !== undefined && e.button !== 0) return;
-      if (e.target.closest('[data-no-drag]')) return;
-      const el = rootRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      dragStateRef.current = {
-        startClientX: e.clientX,
-        startClientY: e.clientY,
-        offsetX: e.clientX - rect.left,
-        offsetY: e.clientY - rect.top,
-        moved: false,
-      };
-      window.addEventListener('pointermove', handleDragMove);
-      window.addEventListener('pointerup', handleDragEnd);
-    },
-    [handleDragMove, handleDragEnd]
-  );
-
-  // Defensive cleanup if the component unmounts mid-drag (e.g. navigating
-  // away) — without this, the window listeners above would outlive it.
-  useEffect(() => {
-    return () => {
-      window.removeEventListener('pointermove', handleDragMove);
-      window.removeEventListener('pointerup', handleDragEnd);
-    };
-  }, [handleDragMove, handleDragEnd]);
+  }
 
   function handlePillClick() {
     if (justDraggedRef.current) {
@@ -341,7 +329,10 @@ export default function FocusTimer({ videoId, playerRef }) {
         ref={rootRef}
         className={`${styles.pill} ${visibilityClass}`}
         style={positionStyle}
-        onPointerDown={handleDragStart}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         <button type="button" className={styles.pillMain} onClick={handlePillClick}>
           <FlameIcon className={styles.pillFlame} />
@@ -377,7 +368,13 @@ export default function FocusTimer({ videoId, playerRef }) {
       className={`${styles.widget} ${visibilityClass}`}
       style={positionStyle}
     >
-      <div className={styles.header} onPointerDown={handleDragStart}>
+      <div
+        className={styles.header}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
         <span className={styles.headerTitle}>
           <TimerIcon className={styles.headerIcon} />
           {phase === 'focus' ? 'Focus session' : 'Break'}

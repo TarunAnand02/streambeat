@@ -145,13 +145,25 @@ export const updateMe = asyncHandler(async (req, res) => {
   // Avatar changes go exclusively through updateAvatar/deleteAvatar below,
   // which keep avatarUrl in sync with avatarFilename/avatarStorageProvider —
   // accepting an arbitrary avatarUrl here would let the two drift apart.
-  const { bio, studyModeEnabled } = req.body;
+  const { bio, studyModeEnabled, weeklyGoalMinutes, autoRemoveCompletedFromContinueWatching } =
+    req.body;
+  if (
+    weeklyGoalMinutes !== undefined &&
+    weeklyGoalMinutes !== null &&
+    (typeof weeklyGoalMinutes !== 'number' || weeklyGoalMinutes < 0 || weeklyGoalMinutes > 10080)
+  ) {
+    throw new ApiError(400, 'weeklyGoalMinutes must be a number between 0 and 10080, or null');
+  }
   const user = await User.findByIdAndUpdate(
     req.userId,
     {
       $set: {
         ...(bio !== undefined && { bio }),
         ...(studyModeEnabled !== undefined && { studyModeEnabled }),
+        ...(weeklyGoalMinutes !== undefined && { weeklyGoalMinutes }),
+        ...(autoRemoveCompletedFromContinueWatching !== undefined && {
+          autoRemoveCompletedFromContinueWatching,
+        }),
       },
     },
     { new: true, runValidators: true, select: '+passwordHash' }

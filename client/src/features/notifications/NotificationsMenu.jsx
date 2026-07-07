@@ -5,18 +5,28 @@ import { timeAgo } from '../../lib/formatDuration';
 import {
   fetchNotifications,
   markAllNotificationsRead,
-  markNotificationRead,
+  markNotificationsReadBulk,
 } from './notificationsApi';
 import styles from './NotificationsMenu.module.css';
 
 const POLL_MS = 30000;
 
-function describe(n) {
+function othersSuffix(count) {
+  const others = count - 1;
+  return others > 0 ? ` and ${others} other${others === 1 ? '' : 's'}` : '';
+}
+
+export function describe(n) {
+  const groupCount = n.groupCount || 1;
   switch (n.type) {
     case 'subscribe':
       return (
         <>
-          <strong>{n.actor?.username}</strong> subscribed to your channel
+          <strong>
+            {n.actor?.username}
+            {othersSuffix(groupCount)}
+          </strong>{' '}
+          subscribed to your channel
         </>
       );
     case 'comment':
@@ -28,7 +38,11 @@ function describe(n) {
     case 'like':
       return (
         <>
-          <strong>{n.actor?.username}</strong> liked <strong>{n.video?.title}</strong>
+          <strong>
+            {n.actor?.username}
+            {othersSuffix(groupCount)}
+          </strong>{' '}
+          liked <strong>{n.video?.title}</strong>
         </>
       );
     case 'reply':
@@ -36,6 +50,12 @@ function describe(n) {
         <>
           <strong>{n.actor?.username}</strong> replied to your comment on{' '}
           <strong>{n.video?.title}</strong>
+        </>
+      );
+    case 'achievement':
+      return (
+        <>
+          🏆 Achievement unlocked: <strong>{n.meta}</strong>
         </>
       );
     default:
@@ -79,15 +99,18 @@ export default function NotificationsMenu() {
 
   async function handleItemClick(n) {
     if (!n.read) {
-      setNotifications((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true } : x)));
+      const ids = new Set(n.ids || [n._id]);
+      setNotifications((prev) => prev.map((x) => (ids.has(x._id) ? { ...x, read: true } : x)));
       setUnreadCount((c) => Math.max(0, c - 1));
-      markNotificationRead(n._id).catch(() => {});
+      markNotificationsReadBulk(n.ids || [n._id]).catch(() => {});
     }
     setOpen(false);
     if (n.type === 'subscribe') {
       navigate(`/channel/${n.actor._id}`);
     } else if (n.video) {
       navigate(`/watch/${n.video._id}`);
+    } else if (n.type === 'achievement') {
+      navigate('/dashboard');
     }
   }
 
@@ -139,6 +162,16 @@ export default function NotificationsMenu() {
               ))}
             </ul>
           )}
+          <button
+            type="button"
+            className={styles.seeAllButton}
+            onClick={() => {
+              setOpen(false);
+              navigate('/notifications');
+            }}
+          >
+            See all notifications
+          </button>
         </div>
       )}
     </div>

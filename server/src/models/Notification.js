@@ -12,7 +12,7 @@ const notificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ['subscribe', 'comment', 'like', 'reply'],
+      enum: ['subscribe', 'comment', 'like', 'reply', 'achievement'],
       required: true,
     },
     actor: {
@@ -25,7 +25,20 @@ const notificationSchema = new Schema(
       ref: 'Video',
       default: null,
     },
+    // Small free-form string for type-specific extra context — currently
+    // only used to carry the achievement code so the client can look up its
+    // title/description without a second round trip.
+    meta: {
+      type: String,
+      default: null,
+    },
     read: {
+      type: Boolean,
+      default: false,
+    },
+    // Soft-deleted notifications are excluded from listNotifications but kept
+    // around briefly so a "Undo" toast can restore them without a re-fetch.
+    deleted: {
       type: Boolean,
       default: false,
     },

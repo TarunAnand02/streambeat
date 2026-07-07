@@ -22,6 +22,7 @@ export async function fetchVideo(id) {
     subscriberCount: data.subscriberCount,
     isSubscribed: data.isSubscribed,
     resumeAt: data.resumeAt,
+    playbackPrefs: data.playbackPrefs,
   };
 }
 
@@ -128,8 +129,12 @@ export async function registerView(id) {
   await axiosClient.post(`/videos/${id}/view`);
 }
 
-export async function updateWatchProgress(id, positionSeconds, durationSeconds) {
-  await axiosClient.patch(`/videos/${id}/progress`, { positionSeconds, durationSeconds });
+export async function updateWatchProgress(id, positionSeconds, durationSeconds, playbackPrefs) {
+  await axiosClient.patch(`/videos/${id}/progress`, {
+    positionSeconds,
+    durationSeconds,
+    ...playbackPrefs,
+  });
 }
 
 export async function previewYoutubeVideo(url) {

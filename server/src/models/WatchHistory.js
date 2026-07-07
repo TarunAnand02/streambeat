@@ -32,6 +32,20 @@ const watchHistorySchema = new Schema({
     type: Number,
     default: null,
   },
+  // Per-video playback preferences, restored the next time this exact video
+  // is opened — previously these reset to defaults on every load.
+  playbackRate: {
+    type: Number,
+    default: 1,
+  },
+  resolution: {
+    type: String,
+    default: 'auto',
+  },
+  captionsOn: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 watchHistorySchema.index({ user: 1, video: 1 }, { unique: true });

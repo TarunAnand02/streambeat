@@ -83,6 +83,17 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleToggleAutoRemove() {
+    const next = !user.autoRemoveCompletedFromContinueWatching;
+    dispatch(updateUser({ ...user, autoRemoveCompletedFromContinueWatching: next }));
+    try {
+      await updateProfile({ autoRemoveCompletedFromContinueWatching: next });
+    } catch {
+      dispatch(updateUser({ ...user, autoRemoveCompletedFromContinueWatching: !next }));
+      showToast('Could not update this setting', { type: 'error' });
+    }
+  }
+
   async function handleExport() {
     setExporting(true);
     try {
@@ -238,6 +249,25 @@ export default function SettingsPage() {
             password?" on the login page if you'd like to set one.
           </p>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionHeading}>Playback</h2>
+        <label className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={user?.autoRemoveCompletedFromContinueWatching ?? true}
+            onChange={handleToggleAutoRemove}
+          />
+          <span>
+            <span className={styles.checkboxLabel}>
+              Remove videos from Continue Watching once finished
+            </span>
+            <p className={styles.checkboxHint}>
+              Turn off to keep finished videos there until you remove them yourself.
+            </p>
+          </span>
+        </label>
       </section>
 
       <section className={styles.section}>

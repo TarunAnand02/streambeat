@@ -52,6 +52,21 @@
   line-height: 1.4;
 }
 
+.actionButton {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.actionButton:hover {
+  text-decoration: underline;
+}
+
 .dismissButton {
   flex-shrink: 0;
   display: flex;

@@ -2,6 +2,7 @@ import { FocusSession } from '../models/FocusSession.js';
 import { User } from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { evaluateAchievements } from '../utils/achievements.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -17,29 +18,41 @@ function startOfTodayUTC() {
 export const createFocusSession = asyncHandler(async (req, res) => {
   const { goal = '', videoId = null, minutes } = req.body;
 
-  const user = await User.findById(req.userId);
-  if (!user) throw new ApiError(404, 'User not found');
+  // A plain read-modify-write .save() here would lose updates under
+  // concurrent requests (two tabs, a retried request) — both would read the
+  // same starting totalFocusMinutes and the second save would clobber the
+  // first's increment. $inc is atomic at the DB level, so it's always
+  // correct regardless of how many requests land at once.
+  await User.updateOne(
+    { _id: req.userId },
+    { $inc: { 'focusStats.totalFocusMinutes': minutes } }
+  );
 
   const today = dateKey(new Date());
   const yesterday = dateKey(new Date(Date.now() - DAY_MS));
-  const stats = user.focusStats || {};
 
-  let currentStreak = stats.currentStreak || 0;
-  if (stats.lastFocusDate === today) {
-    // Already logged a session today — streak day is already counted.
-  } else if (stats.lastFocusDate === yesterday) {
-    currentStreak += 1;
-  } else {
-    currentStreak = 1;
+  let user = await User.findById(req.userId).select('focusStats');
+  if (!user) throw new ApiError(404, 'User not found');
+
+  // The streak only ever needs to transition once per calendar day. Guard
+  // the write with the lastFocusDate this request observed: if a concurrent
+  // request already advanced it first, this conditional update simply won't
+  // match (no double-increment), and the re-read below picks up its result.
+  if (user.focusStats.lastFocusDate !== today) {
+    const nextStreak =
+      user.focusStats.lastFocusDate === yesterday ? user.focusStats.currentStreak + 1 : 1;
+    await User.updateOne(
+      { _id: req.userId, 'focusStats.lastFocusDate': user.focusStats.lastFocusDate },
+      {
+        $set: {
+          'focusStats.currentStreak': nextStreak,
+          'focusStats.longestStreak': Math.max(user.focusStats.longestStreak, nextStreak),
+          'focusStats.lastFocusDate': today,
+        },
+      }
+    );
+    user = await User.findById(req.userId).select('focusStats');
   }
-
-  user.focusStats = {
-    currentStreak,
-    longestStreak: Math.max(stats.longestStreak || 0, currentStreak),
-    lastFocusDate: today,
-    totalFocusMinutes: (stats.totalFocusMinutes || 0) + minutes,
-  };
-  await user.save();
 
   const session = await FocusSession.create({
     user: req.userId,
@@ -49,6 +62,7 @@ export const createFocusSession = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({ session, stats: user.focusStats });
+  evaluateAchievements(req.userId).catch(() => {});
 });
 
 export const getFocusStats = asyncHandler(async (req, res) => {

@@ -15,6 +15,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { assertCategoryExists } from './category.controller.js';
 import { findOrCreateWatchLater } from './collection.controller.js';
 import { createNotification } from './notification.controller.js';
+import { evaluateAchievements } from '../utils/achievements.js';
 import {
   CAPTION_STORAGE_DIR,
   THUMBNAIL_STORAGE_DIR,
@@ -89,6 +90,7 @@ export const createVideo = asyncHandler(async (req, res) => {
 
   res.status(201).json({ video });
   transcodeVideo(video._id).catch(() => {});
+  evaluateAchievements(req.userId).catch(() => {});
 });
 
 export const importFromUrl = asyncHandler(async (req, res) => {
@@ -139,6 +141,7 @@ export const importFromUrl = asyncHandler(async (req, res) => {
 
   res.status(201).json({ video });
   transcodeVideo(video._id).catch(() => {});
+  evaluateAchievements(req.userId).catch(() => {});
 });
 
 // Shared by listVideos and searchVideos so "narrow by category/tags/duration/
@@ -204,10 +207,14 @@ export const getVideo = asyncHandler(async (req, res) => {
 
   // Resume-from-last-position — only offered if they got some way in and
   // haven't essentially finished it already (near the end just restarts).
+  // Playback prefs (speed/resolution/captions), by contrast, are restored
+  // whenever they exist regardless of resume eligibility — they're a
+  // per-video preference, not tied to "how far in was I".
   let resumeAt = 0;
+  let playbackPrefs = null;
   if (req.userId) {
     const historyEntry = await WatchHistory.findOne({ user: req.userId, video: video._id }).select(
-      'positionSeconds durationSeconds'
+      'positionSeconds durationSeconds playbackRate resolution captionsOn'
     );
     const pastIntro = historyEntry?.positionSeconds > 5;
     const notNearlyDone =
@@ -215,9 +222,16 @@ export const getVideo = asyncHandler(async (req, res) => {
     if (pastIntro && notNearlyDone) {
       resumeAt = historyEntry.positionSeconds;
     }
+    if (historyEntry) {
+      playbackPrefs = {
+        playbackRate: historyEntry.playbackRate,
+        resolution: historyEntry.resolution,
+        captionsOn: historyEntry.captionsOn,
+      };
+    }
   }
 
-  res.json({ video, subscriberCount, isSubscribed, resumeAt });
+  res.json({ video, subscriberCount, isSubscribed, resumeAt, playbackPrefs });
 });
 
 // Called periodically while playing (and on pause/unload) — separate from
@@ -225,10 +239,17 @@ export const getVideo = asyncHandler(async (req, res) => {
 // no-op for logged-out viewers; there's no per-user row to save this to.
 export const updateWatchProgress = asyncHandler(async (req, res) => {
   if (!req.userId) return res.status(204).send();
-  const { positionSeconds, durationSeconds } = req.body;
+  const { positionSeconds, durationSeconds, playbackRate, resolution, captionsOn } = req.body;
   await WatchHistory.findOneAndUpdate(
     { user: req.userId, video: req.params.id },
-    { positionSeconds, ...(durationSeconds && { durationSeconds }), watchedAt: new Date() },
+    {
+      positionSeconds,
+      ...(durationSeconds && { durationSeconds }),
+      ...(playbackRate !== undefined && { playbackRate }),
+      ...(resolution !== undefined && { resolution }),
+      ...(captionsOn !== undefined && { captionsOn }),
+      watchedAt: new Date(),
+    },
     { upsert: true }
   );
   res.status(204).send();
@@ -267,6 +288,7 @@ export const incrementView = asyncHandler(async (req, res) => {
       { watchedAt: new Date() },
       { upsert: true }
     ).catch(() => {});
+    evaluateAchievements(req.userId).catch(() => {});
   }
 
   res.json({ views: video.views });

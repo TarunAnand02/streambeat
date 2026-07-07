@@ -55,6 +55,9 @@ export const updateProgressSchema = z.object({
   body: z.object({
     positionSeconds: z.coerce.number().min(0),
     durationSeconds: z.coerce.number().positive().optional(),
+    playbackRate: z.coerce.number().min(0.25).max(3).optional(),
+    resolution: z.string().max(20).optional(),
+    captionsOn: z.coerce.boolean().optional(),
   }),
   query: z.any(),
   params: z.object({ id: objectId }),

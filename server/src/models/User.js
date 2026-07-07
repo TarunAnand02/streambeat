@@ -85,6 +85,26 @@ const userSchema = new Schema(
       lastFocusDate: { type: String, default: null },
       totalFocusMinutes: { type: Number, default: 0 },
     },
+    // Codes are matched against the static ACHIEVEMENTS catalog in
+    // server/src/utils/achievements.js — kept here rather than a separate
+    // collection since it's an append-only small list per user.
+    unlockedAchievements: {
+      type: [{ code: String, unlockedAt: Date, _id: false }],
+      default: [],
+    },
+    // Self-set weekly study-time target shown as a progress bar on the
+    // Learning Dashboard — null means no goal has been set yet.
+    weeklyGoalMinutes: {
+      type: Number,
+      default: null,
+    },
+    // When true (default), a video drops off Continue Watching once it's
+    // basically finished; some users prefer it to stick around until they
+    // remove it manually.
+    autoRemoveCompletedFromContinueWatching: {
+      type: Boolean,
+      default: true,
+    },
     // "Not interested" / "don't recommend this channel" — internal
     // recommendation-tuning state, never exposed to any other user, so kept
     // out of the default projection like the other select:false fields.

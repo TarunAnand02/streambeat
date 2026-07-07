@@ -21,9 +21,9 @@ export function ToastProvider({ children }) {
   }, []);
 
   const showToast = useCallback(
-    (message, { type = 'info' } = {}) => {
+    (message, { type = 'info', action } = {}) => {
       const id = nextId++;
-      setToasts((prev) => [...prev, { id, message, type }]);
+      setToasts((prev) => [...prev, { id, message, type, action }]);
       const timer = setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
       timers.current.set(id, timer);
       return id;
@@ -39,6 +39,18 @@ export function ToastProvider({ children }) {
           <div key={t.id} className={`${styles.toast} ${styles[t.type] || ''}`}>
             {t.type === 'success' && <CheckIcon className={styles.icon} />}
             <span className={styles.message}>{t.message}</span>
+            {t.action && (
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={() => {
+                  t.action.onClick();
+                  dismiss(t.id);
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             <button
               type="button"
               className={styles.dismissButton}

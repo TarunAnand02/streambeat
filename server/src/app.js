@@ -4,10 +4,12 @@ import cors from 'cors';
 import express from 'express';
 import fs from 'fs';
 import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import achievementRoutes from './routes/achievement.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import categoryRoutes from './routes/category.routes.js';
@@ -106,6 +108,11 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+// Strips any request key starting with '$' or containing '.' from
+// body/params/query — defense in depth against NoSQL operator injection
+// (e.g. {"email": {"$ne": null}}) on top of the zod validation every route
+// already goes through.
+app.use(mongoSanitize());
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -122,6 +129,7 @@ app.use('/api/help', helpRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/focus-sessions', focusSessionRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 app.get('/robots.txt', getRobotsTxt);
 app.get('/sitemap.xml', getSitemap);

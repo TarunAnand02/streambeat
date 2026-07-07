@@ -11,6 +11,7 @@ router.use(protect);
 router.get('/', historyController.listHistory);
 router.get('/continue-watching', historyController.getContinueWatching);
 router.get('/weekly-summary', historyController.getWeeklySummary);
+router.get('/learning-stats', historyController.getLearningStats);
 router.delete('/', historyController.clearHistory);
 router.delete('/:videoId', validate(historyVideoIdSchema), historyController.removeHistoryEntry);
 

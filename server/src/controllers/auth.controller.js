@@ -69,6 +69,8 @@ export function toPublicUser(user) {
     hasPassword: Boolean(user.passwordHash),
     studyModeEnabled: user.studyModeEnabled,
     focusStats: user.focusStats,
+    weeklyGoalMinutes: user.weeklyGoalMinutes,
+    autoRemoveCompletedFromContinueWatching: user.autoRemoveCompletedFromContinueWatching,
   };
 }
 

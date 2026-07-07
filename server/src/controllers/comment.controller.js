@@ -4,6 +4,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { createNotification } from './notification.controller.js';
 import { assertViewable } from './video.controller.js';
+import { evaluateAchievements } from '../utils/achievements.js';
 
 export const listComments = asyncHandler(async (req, res) => {
   const video = await Video.findById(req.params.videoId).select('uploader visibility');
@@ -56,6 +57,7 @@ export const createComment = asyncHandler(async (req, res) => {
       video: req.params.videoId,
     });
   }
+  evaluateAchievements(req.userId).catch(() => {});
 });
 
 export const deleteComment = asyncHandler(async (req, res) => {

@@ -18,6 +18,7 @@ import {
   HomeIcon,
   ImportIcon,
   SettingsIcon,
+  TargetIcon,
   UploadIcon,
 } from '../ui/Icon';
 import styles from './Sidebar.module.css';
@@ -87,6 +88,17 @@ export default function Sidebar({ isOpen, onClose }) {
                 <ChannelIcon />
               </span>
               Your Channel
+            </NavLink>
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) =>
+                isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
+              }
+            >
+              <span className={styles.icon}>
+                <TargetIcon />
+              </span>
+              Dashboard
             </NavLink>
             <NavLink
               to="/watch-later"

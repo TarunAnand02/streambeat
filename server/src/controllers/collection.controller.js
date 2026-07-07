@@ -3,6 +3,7 @@ import { User } from '../models/User.js';
 import { Video } from '../models/Video.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { evaluateAchievements } from '../utils/achievements.js';
 
 function roleFor(collection, userId) {
   if (collection.owner.toString() === userId) return 'owner';
@@ -56,6 +57,7 @@ export const createCollection = asyncHandler(async (req, res) => {
     visibility: req.body.visibility || 'private',
   });
   res.status(201).json({ collection });
+  evaluateAchievements(req.userId).catch(() => {});
 });
 
 // Shown on a user's channel page — only ever their top-level (no parent)

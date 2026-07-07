@@ -143,6 +143,24 @@
   color: var(--color-text-subtle);
 }
 
+.seeAllButton {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.seeAllButton:hover {
+  background: var(--color-surface-hover);
+}
+
 @media (max-width: 768px) {
   .menu {
     position: fixed;

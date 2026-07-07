@@ -399,6 +399,16 @@ export function FlagIcon(props) {
   );
 }
 
+export function CaptionsIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M7 10.5c-.8-.8-2.2-.8-3 0-.9.9-.9 2.6 0 3.5.8.8 2.2.8 3 0" />
+      <path d="M16 10.5c-.8-.8-2.2-.8-3 0-.9.9-.9 2.6 0 3.5.8.8 2.2.8 3 0" />
+    </svg>
+  );
+}
+
 export function FlameIcon(props) {
   return (
     <svg {...base} {...props}>

@@ -4,7 +4,15 @@ import Chapters from '../../components/Chapters';
 import FocusTimer from '../../components/FocusTimer';
 import Spinner from '../../components/ui/Spinner';
 import Avatar from '../../components/ui/Avatar';
-import { AudioIcon, FlagIcon, PipIcon, ShareIcon, TheaterIcon, ThumbsUpIcon } from '../../components/ui/Icon';
+import {
+  AudioIcon,
+  CaptionsIcon,
+  FlagIcon,
+  PipIcon,
+  ShareIcon,
+  TheaterIcon,
+  ThumbsUpIcon,
+} from '../../components/ui/Icon';
 import ReportModal from '../reports/ReportModal';
 import { useToast } from '../../components/toast/ToastProvider';
 import SaveToCollectionMenu from '../collections/SaveToCollectionMenu';
@@ -56,15 +64,45 @@ export default function WatchPage() {
   const [sleepEndsAt, setSleepEndsAt] = useState(null);
   const [audioOnly, setAudioOnly] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [captionsOn, setCaptionsOn] = useState(false);
   const videoRef = useRef(null);
   const youtubeRef = useRef(null);
   const wrapperRef = useRef(null);
   const resumeTimeRef = useRef(0);
+  // Mirrors of the corresponding state, read by the periodic progress
+  // report below — kept as refs so that effect doesn't need to tear down
+  // and rebuild its interval every time the user changes speed/resolution.
+  const resolutionRef = useRef(resolution);
+  const playbackRateRef = useRef(playbackRate);
+  const captionsOnRef = useRef(captionsOn);
 
   useEffect(() => {
+    resolutionRef.current = resolution;
+  }, [resolution]);
+  useEffect(() => {
+    playbackRateRef.current = playbackRate;
+  }, [playbackRate]);
+  useEffect(() => {
+    captionsOnRef.current = captionsOn;
+  }, [captionsOn]);
+
+  useEffect(() => {
+    // Reset to defaults immediately so switching videos never briefly shows
+    // the previous video's settings; fetchVideo's playbackPrefs (if any)
+    // then overrides these once it resolves, below.
     setResolution('auto');
     setPlaybackRate(1);
+    setCaptionsOn(false);
   }, [videoId]);
+
+  // The <track> element's `default` attribute only sets INITIAL state — a
+  // toggle button needs to flip the TextTrack's mode directly to actually
+  // show/hide captions after the video has already loaded.
+  useEffect(() => {
+    const track = videoRef.current?.textTracks?.[0];
+    if (!track) return;
+    track.mode = captionsOn ? 'showing' : 'hidden';
+  }, [captionsOn, resolution, video?._id]);
 
   function handleResolutionChange(newRes) {
     resumeTimeRef.current = videoRef.current?.currentTime || 0;
@@ -128,6 +166,15 @@ export default function WatchPage() {
         // YouTube-sourced video, YoutubeEmbed's onReady callback seeks
         // instead (the iframe player isn't ready this early).
         if (data.resumeAt) resumeTimeRef.current = data.resumeAt;
+        if (data.playbackPrefs) {
+          setResolution(data.playbackPrefs.resolution || 'auto');
+          setPlaybackRate(data.playbackPrefs.playbackRate || 1);
+          setCaptionsOn(data.playbackPrefs.captionsOn);
+        } else {
+          // No saved preference yet — match the historical default of
+          // captions on whenever the video actually has a caption file.
+          setCaptionsOn(Boolean(data.captionFilename));
+        }
         registerView(videoId).catch(() => {});
         setLoading(false);
       })
@@ -164,7 +211,11 @@ export default function WatchPage() {
     function report() {
       const position = getCurrentTime();
       if (position < 3) return; // not worth persisting "basically zero"
-      updateWatchProgress(video._id, position, video.durationSeconds || undefined).catch(() => {});
+      updateWatchProgress(video._id, position, video.durationSeconds || undefined, {
+        playbackRate: playbackRateRef.current,
+        resolution: resolutionRef.current,
+        captionsOn: captionsOnRef.current,
+      }).catch(() => {});
     }
 
     const timer = setInterval(report, 10000);
@@ -386,7 +437,7 @@ export default function WatchPage() {
             }}
           >
             {video.captionFilename && (
-              <track kind="subtitles" src={captionUrl(video._id)} srcLang="en" label="English" default />
+              <track kind="subtitles" src={captionUrl(video._id)} srcLang="en" label="English" />
             )}
           </video>
           {audioOnly && (
@@ -471,6 +522,17 @@ export default function WatchPage() {
             aria-label="Toggle audio-only mode"
           >
             <AudioIcon />
+          </button>
+        )}
+        {video.source === 'upload' && video.captionFilename && (
+          <button
+            type="button"
+            className={captionsOn ? `${styles.theaterButton} ${styles.theaterButtonActive}` : styles.theaterButton}
+            onClick={() => setCaptionsOn((v) => !v)}
+            title="Toggle captions"
+            aria-label="Toggle captions"
+          >
+            <CaptionsIcon />
           </button>
         )}
         <button

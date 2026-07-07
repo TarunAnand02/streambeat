@@ -22,6 +22,16 @@ const collectionSchema = new Schema(
       required: true,
       index: true,
     },
+    // Private by default — matches how a pre-existing collection (created
+    // before this field existed, so it's simply absent) must behave: never
+    // suddenly visible on someone's channel page just because a query
+    // matches it. Only owner-initiated has any actual effect either way.
+    visibility: {
+      type: String,
+      enum: ['public', 'private'],
+      default: 'private',
+      index: true,
+    },
     // Optional parent collection, for organizing collections into folders.
     // Only ever set to another collection owned by the same user.
     parent: {

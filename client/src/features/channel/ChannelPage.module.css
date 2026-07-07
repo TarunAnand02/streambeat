@@ -123,6 +123,48 @@
   font-size: 1em;
 }
 
+.playlistSection {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.playlistGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.playlistCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  transition: background-color 0.15s ease;
+}
+
+.playlistCard:hover {
+  background: var(--color-surface-hover);
+}
+
+.playlistIcon {
+  font-size: 22px;
+  color: var(--color-accent);
+}
+
+.playlistName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.playlistCount {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 .activitySection {
   margin-top: 40px;
   padding-top: 24px;

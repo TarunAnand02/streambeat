@@ -274,8 +274,14 @@ export default function WatchPage() {
   const isOwner = user && video.uploader?._id === user.id;
   const chapters = parseChapters(video.description);
 
+  const pageClassName = [styles.page, theaterMode && styles.theaterActive, playlist && styles.pageWithPlaylist]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className={theaterMode ? `${styles.page} ${styles.theaterActive}` : styles.page}>
+    <div className={pageClassName}>
+      <div className={playlist ? `${styles.layout} ${styles.layoutWithPlaylist}` : styles.layout}>
+      <div className={styles.mainColumn}>
       {video.source === 'youtube' ? (
         <div className={styles.embedWrapper} ref={wrapperRef}>
           <YoutubeEmbed
@@ -352,18 +358,6 @@ export default function WatchPage() {
           <TheaterIcon />
         </button>
       </div>
-
-      {playlist && (
-        <PlaylistPanel
-          playlist={playlist}
-          currentVideoId={videoId}
-          playlistId={playlistId}
-          onPrev={() => goToPlaylistVideo(prevInPlaylist)}
-          onNext={() => goToPlaylistVideo(nextInPlaylist)}
-          hasPrev={Boolean(prevInPlaylist)}
-          hasNext={Boolean(nextInPlaylist)}
-        />
-      )}
 
       <h1 className={styles.title}>{video.title}</h1>
 
@@ -450,6 +444,20 @@ export default function WatchPage() {
       {user && <NotesPanel videoId={videoId} getCurrentTime={getCurrentTime} onSeek={seekTo} />}
 
       <CommentList videoId={videoId} />
+      </div>
+
+      {playlist && (
+        <PlaylistPanel
+          playlist={playlist}
+          currentVideoId={videoId}
+          playlistId={playlistId}
+          onPrev={() => goToPlaylistVideo(prevInPlaylist)}
+          onNext={() => goToPlaylistVideo(nextInPlaylist)}
+          hasPrev={Boolean(prevInPlaylist)}
+          hasNext={Boolean(nextInPlaylist)}
+        />
+      )}
+      </div>
     </div>
   );
 }

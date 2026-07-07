@@ -10,6 +10,11 @@ export async function fetchCollection(id) {
   return data;
 }
 
+export async function fetchPublicCollections(userId) {
+  const { data } = await axiosClient.get(`/collections/channel/${userId}`);
+  return data.collections;
+}
+
 export async function createCollection({ name, description, parent }) {
   const { data } = await axiosClient.post('/collections', { name, description, parent: parent || undefined });
   return data.collection;

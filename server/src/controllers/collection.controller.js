@@ -29,8 +29,34 @@ export const createCollection = asyncHandler(async (req, res) => {
     description: req.body.description || '',
     owner: req.userId,
     parent: req.body.parent || null,
+    visibility: req.body.visibility || 'private',
   });
   res.status(201).json({ collection });
+});
+
+// Shown on a user's channel page — only ever their top-level (no parent)
+// public collections; a subfolder is reached by opening its parent, same as
+// the owner's own view, and doesn't need its own separate listing here.
+export const listPublicCollections = asyncHandler(async (req, res) => {
+  const collections = await Collection.find({
+    owner: req.params.userId,
+    visibility: 'public',
+    parent: null,
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const withCounts = await Promise.all(
+    collections.map(async (collection) => {
+      const videoCount = await Video.countDocuments({
+        collections: collection._id,
+        visibility: 'public',
+      });
+      return { ...collection, videoCount };
+    })
+  );
+
+  res.json({ collections: withCounts });
 });
 
 export const listCollections = asyncHandler(async (req, res) => {
@@ -55,10 +81,19 @@ export const getCollection = asyncHandler(async (req, res) => {
     .populate('collaborators.user', 'username avatarUrl')
     .populate('parent', 'name');
   if (!collection) throw new ApiError(404, 'Collection not found');
-  const role = roleFor(collection, req.userId);
-  if (!role) throw new ApiError(403, 'You do not have access to this collection');
+  const role = req.userId ? roleFor(collection, req.userId) : null;
+  const isPublicView = !role && collection.visibility === 'public';
+  if (!role && !isPublicView) {
+    throw new ApiError(403, 'You do not have access to this collection');
+  }
 
-  const videos = await Video.find({ collections: collection._id })
+  // A public playlist shouldn't leak a private/unlisted video's existence to
+  // someone who isn't its owner — same rule a channel page's video grid
+  // already follows for non-owners.
+  const videoFilter = isPublicView
+    ? { collections: collection._id, visibility: 'public' }
+    : { collections: collection._id };
+  const videos = await Video.find(videoFilter)
     .sort({ createdAt: -1 })
     .populate('uploader', 'username avatarUrl');
 
@@ -112,6 +147,7 @@ export const updateCollection = asyncHandler(async (req, res) => {
 
   if (req.body.name !== undefined) collection.name = req.body.name;
   if (req.body.description !== undefined) collection.description = req.body.description;
+  if (req.body.visibility !== undefined) collection.visibility = req.body.visibility;
 
   if (req.body.parent !== undefined) {
     const newParentId = req.body.parent;

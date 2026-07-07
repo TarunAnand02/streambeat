@@ -1,6 +1,5 @@
+import { API_BASE_URL as baseURL } from '../../lib/apiBaseUrl';
 import styles from './Avatar.module.css';
-
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // avatarUrl is a path relative to the API (e.g. "/users/<id>/avatar"), not a
 // full URL — same reasoning as videosApi.js's thumbnailUrl/streamUrl: the

@@ -2,11 +2,14 @@ import { z } from 'zod';
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid collection id');
 
+const visibility = z.enum(['public', 'private']);
+
 export const createCollectionSchema = z.object({
   body: z.object({
     name: z.string().trim().min(1, 'Name is required').max(60),
     description: z.string().trim().max(300).optional().default(''),
     parent: objectId.optional().nullable(),
+    visibility: visibility.optional(),
   }),
   query: z.any(),
   params: z.any(),
@@ -17,6 +20,7 @@ export const updateCollectionSchema = z.object({
     name: z.string().trim().min(1).max(60).optional(),
     description: z.string().trim().max(300).optional(),
     parent: objectId.optional().nullable(),
+    visibility: visibility.optional(),
   }),
   query: z.any(),
   params: z.object({ id: objectId }),

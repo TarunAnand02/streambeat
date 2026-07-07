@@ -53,13 +53,13 @@ export default function App() {
           <Route path="/watch/:videoId" element={<WatchPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/channel/:userId" element={<ChannelPage />} />
+          <Route path="/collections/:id" element={<CollectionDetailPage />} />
           <Route path="/help" element={<HelpPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/import" element={<ImportPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
-            <Route path="/collections/:id" element={<CollectionDetailPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />

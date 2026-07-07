@@ -1,6 +1,5 @@
 import { axiosClient } from '../../lib/axiosClient';
-
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { API_BASE_URL as baseURL } from '../../lib/apiBaseUrl';
 
 export async function fetchVideos(page = 1, { category, minDuration, maxDuration, tags, collectionId } = {}) {
   const { data } = await axiosClient.get('/videos', {

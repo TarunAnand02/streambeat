@@ -3,12 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import VideoCard from '../../components/VideoCard';
 import VideoCardSkeleton from '../../components/VideoCardSkeleton';
 import Avatar from '../../components/ui/Avatar';
-import { CalendarIcon, MessageIcon, UploadIcon } from '../../components/ui/Icon';
+import { CalendarIcon, FolderIcon, MessageIcon, UploadIcon } from '../../components/ui/Icon';
 import { useToast } from '../../components/toast/ToastProvider';
 import { useAuth } from '../../hooks/useAuth';
 import { useDocumentMeta } from '../../hooks/useDocumentMeta';
 import { timeAgo } from '../../lib/formatDuration';
-import { fetchCollections } from '../collections/collectionsApi';
+import { fetchCollections, fetchPublicCollections } from '../collections/collectionsApi';
 import { bulkVideoAction, deleteVideo } from '../videos/videosApi';
 import { fetchChannel } from './channelApi';
 import { subscribe, unsubscribe } from './subscriptionsApi';
@@ -29,6 +29,7 @@ export default function ChannelPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [collections, setCollections] = useState([]);
+  const [publicCollections, setPublicCollections] = useState([]);
   const [addToCollectionId, setAddToCollectionId] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
   const [subBusy, setSubBusy] = useState(false);
@@ -45,6 +46,9 @@ export default function ChannelPage() {
         setData(result);
         setLoading(false);
       }
+    });
+    fetchPublicCollections(userId).then((result) => {
+      if (!cancelled) setPublicCollections(result);
     });
     return () => {
       cancelled = true;
@@ -278,6 +282,23 @@ export default function ChannelPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {publicCollections.length > 0 && (
+        <div className={styles.playlistSection}>
+          <h2 className={styles.activityHeading}>Playlists</h2>
+          <div className={styles.playlistGrid}>
+            {publicCollections.map((c) => (
+              <Link key={c._id} className={styles.playlistCard} to={`/collections/${c._id}`}>
+                <FolderIcon className={styles.playlistIcon} />
+                <span className={styles.playlistName}>{c.name}</span>
+                <span className={styles.playlistCount}>
+                  {c.videoCount} video{c.videoCount === 1 ? '' : 's'}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

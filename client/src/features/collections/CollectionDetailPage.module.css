@@ -82,6 +82,22 @@
   text-transform: capitalize;
 }
 
+.visibilityButton {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.visibilityButton:hover {
+  border-color: var(--color-text-subtle);
+}
+
 .deleteButton {
   border: 1px solid var(--color-danger);
   background: none;

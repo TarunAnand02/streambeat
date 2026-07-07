@@ -1,9 +1,8 @@
 import axios from 'axios';
-
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from './apiBaseUrl';
 
 export const axiosClient = axios.create({
-  baseURL,
+  baseURL: API_BASE_URL,
   withCredentials: true, // send the httpOnly refresh cookie
 });
 

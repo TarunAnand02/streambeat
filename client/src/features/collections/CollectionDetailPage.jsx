@@ -66,6 +66,19 @@ export default function CollectionDetailPage() {
     setEditingName(false);
   }
 
+  async function handleToggleVisibility() {
+    const next = data.collection.visibility === 'public' ? 'private' : 'public';
+    try {
+      const updated = await updateCollection(id, { visibility: next });
+      setData((prev) => ({ ...prev, collection: updated }));
+      showToast(next === 'public' ? 'Playlist is now public' : 'Playlist is now private', {
+        type: 'success',
+      });
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Could not update visibility', { type: 'error' });
+    }
+  }
+
   async function handleDelete() {
     if (!window.confirm('Delete this collection? Videos in it will not be deleted.')) return;
     try {
@@ -196,7 +209,15 @@ export default function CollectionDetailPage() {
           </h1>
         )}
         <div className={styles.headerActions}>
-          {!isOwner && <span className={styles.roleBadge}>Shared with you · {data.role}</span>}
+          {!isOwner && data.role && (
+            <span className={styles.roleBadge}>Shared with you · {data.role}</span>
+          )}
+          {!isOwner && !data.role && <span className={styles.roleBadge}>Public playlist</span>}
+          {isOwner && (
+            <button type="button" className={styles.visibilityButton} onClick={handleToggleVisibility}>
+              {data.collection.visibility === 'public' ? 'Public' : 'Private'}
+            </button>
+          )}
           {data.videos.length > 0 && (
             <Link className={styles.playAllButton} to={`/watch/${data.videos[0]._id}?playlist=${id}`}>
               <PlayIcon className={styles.inlineIcon} /> Play all

@@ -71,8 +71,8 @@ export const env = {
   ffprobePath: process.env.FFPROBE_PATH || 'ffprobe',
   // Optional OAuth ("Continue with Google/GitHub") — each provider is
   // independently optional; the login/register pages simply don't show that
-  // button until both its id and secret are set. Redirect URIs are derived
-  // from the server's own base URL rather than needing a separate env var.
+  // button until both its id and secret are set. Redirect URIs are built
+  // from SERVER_ORIGIN below.
   oauth: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || null,
@@ -85,3 +85,30 @@ export const env = {
   },
   serverOrigin: process.env.SERVER_ORIGIN || `http://localhost:${Number(process.env.PORT) || 5000}`,
 };
+
+// These two mistakes have each already happened once in production and are
+// easy to make again (an env var that's merely *optional* for the app to
+// boot, but wrong in a way nothing crashes on — it just silently breaks one
+// feature for real users until someone notices and asks why). Logging them
+// loudly at boot, in prod, is cheap insurance against a repeat.
+if (env.isProd) {
+  if (env.clientOrigin.includes('localhost')) {
+    console.warn(
+      `[env] CLIENT_ORIGIN is set to "${env.clientOrigin}" in production — ` +
+        'emailed links, the sitemap, and social link previews will all point at localhost. ' +
+        'Set CLIENT_ORIGIN to this app\'s real public URL.'
+    );
+  }
+  const oauthConfigured = Boolean(
+    (env.oauth.google.clientId && env.oauth.google.clientSecret) ||
+      (env.oauth.github.clientId && env.oauth.github.clientSecret)
+  );
+  if (oauthConfigured && !process.env.SERVER_ORIGIN) {
+    console.warn(
+      '[env] Google/GitHub OAuth is configured but SERVER_ORIGIN is unset — ' +
+        `redirect URIs will default to "${env.serverOrigin}", which the provider will reject ` +
+        '(redirect_uri_mismatch) the moment someone actually tries to sign in. ' +
+        "Set SERVER_ORIGIN to this app's real public URL."
+    );
+  }
+}

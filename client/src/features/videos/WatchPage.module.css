@@ -1,5 +1,31 @@
 .page {
   max-width: 900px;
+  transition: max-width 0.2s ease;
+}
+
+.pageWithPlaylist {
+  max-width: 1400px;
+}
+
+.layout {
+  display: block;
+}
+
+.layoutWithPlaylist {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.mainColumn {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .layoutWithPlaylist {
+    grid-template-columns: 1fr;
+  }
 }
 
 .title {

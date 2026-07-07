@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDownIcon, CloseIcon, FlameIcon, TargetIcon, TimerIcon } from './ui/Icon';
 import { useToast } from './toast/ToastProvider';
 import { fetchFocusStats, postFocusSession } from '../features/focus/focusApi';
@@ -324,7 +325,16 @@ export default function FocusTimer({ videoId, playerRef }) {
   const streak = stats?.currentStreak ?? 0;
 
   if (!expanded) {
-    return (
+    // Rendered through a portal straight into <body> — WatchPage's routed
+    // content sits inside AppLayout's .pageEnter wrapper, which plays a
+    // fade/slide-in animation with fill-mode: both. That animation leaves a
+    // live `transform` on the ancestor forever (even once finished), which
+    // per spec makes IT the containing block for any position:fixed
+    // descendant instead of the real viewport — so without the portal, the
+    // widget's "fixed" coordinates are relative to that scrolled ancestor,
+    // not the screen, and dragging drifts further off the further the page
+    // is scrolled.
+    return createPortal(
       <div
         ref={rootRef}
         className={`${styles.pill} ${visibilityClass}`}
@@ -358,11 +368,12 @@ export default function FocusTimer({ videoId, playerRef }) {
         >
           <CloseIcon />
         </button>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
+  return createPortal(
     <div
       ref={rootRef}
       className={`${styles.widget} ${visibilityClass}`}
@@ -486,6 +497,7 @@ export default function FocusTimer({ videoId, playerRef }) {
           <span>{stats.todayMinutes ?? 0} min today</span>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

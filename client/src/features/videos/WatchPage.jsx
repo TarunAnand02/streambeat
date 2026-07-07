@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Chapters from '../../components/Chapters';
 import FocusTimer from '../../components/FocusTimer';
+import TranscriptPanel from '../../components/TranscriptPanel';
 import Spinner from '../../components/ui/Spinner';
 import Avatar from '../../components/ui/Avatar';
 import {
@@ -635,6 +636,8 @@ export default function WatchPage() {
       {studyMode && <FocusTimer videoId={videoId} playerRef={wrapperRef} />}
 
       {chapters.length > 0 && <Chapters chapters={chapters} onSeek={seekTo} />}
+
+      {video.captionFilename && <TranscriptPanel videoId={videoId} onSeek={seekTo} />}
 
       {isOwner && <VideoAnalyticsPanel videoId={videoId} />}
 

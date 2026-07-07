@@ -86,10 +86,13 @@ export const listPublicCollections = asyncHandler(async (req, res) => {
 });
 
 export const listCollections = asyncHandler(async (req, res) => {
-  const collections = await Collection.find({
+  const filter = {
     $or: [{ owner: req.userId }, { 'collaborators.user': req.userId }],
-  })
-    .sort({ createdAt: -1 })
+  };
+  if (req.query.includeArchived !== 'true') filter.archived = { $ne: true };
+
+  const collections = await Collection.find(filter)
+    .sort({ pinned: -1, createdAt: -1 })
     .lean();
 
   const withCounts = await Promise.all(
@@ -174,6 +177,9 @@ export const updateCollection = asyncHandler(async (req, res) => {
   if (req.body.name !== undefined) collection.name = req.body.name;
   if (req.body.description !== undefined) collection.description = req.body.description;
   if (req.body.visibility !== undefined) collection.visibility = req.body.visibility;
+  if (req.body.pinned !== undefined) collection.pinned = req.body.pinned;
+  if (req.body.color !== undefined) collection.color = req.body.color;
+  if (req.body.archived !== undefined) collection.archived = req.body.archived;
 
   if (req.body.parent !== undefined) {
     const newParentId = req.body.parent;

@@ -5,6 +5,10 @@ const OPTIONS = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
   { value: 'system', label: 'System' },
+  { value: 'amoled', label: 'AMOLED' },
+  { value: 'midnight', label: 'Midnight' },
+  { value: 'glassmorphism', label: 'Glassmorphism' },
+  { value: 'cyberpunk', label: 'Cyberpunk' },
 ];
 
 export default function AppearanceSection() {

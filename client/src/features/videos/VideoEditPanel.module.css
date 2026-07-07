@@ -232,6 +232,17 @@
   color: var(--color-text-subtle);
 }
 
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.checkboxRow input {
+  margin-top: 3px;
+}
+
 .collectionList {
   display: flex;
   flex-direction: column;

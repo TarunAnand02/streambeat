@@ -50,6 +50,11 @@ export async function revokeSession(id) {
   await axiosClient.delete(`/auth/sessions/${id}`);
 }
 
+export async function fetchStorageStats() {
+  const { data } = await axiosClient.get('/users/me/storage');
+  return data;
+}
+
 export async function exportUserData() {
   const response = await axiosClient.get('/users/me/export', { responseType: 'blob' });
   const url = URL.createObjectURL(response.data);

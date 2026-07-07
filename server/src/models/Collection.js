@@ -60,6 +60,24 @@ const collectionSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    // Pinned collections sort first on the Collections page.
+    pinned: {
+      type: Boolean,
+      default: false,
+    },
+    // Gmail-style label — a hex string, purely cosmetic, no meaning attached
+    // server-side beyond storing/returning it.
+    color: {
+      type: String,
+      default: null,
+    },
+    // Hides a collection from the default Collections list without deleting
+    // it or touching its videos.
+    archived: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   { timestamps: true }
 );

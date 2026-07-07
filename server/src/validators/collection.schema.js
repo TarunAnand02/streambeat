@@ -21,6 +21,13 @@ export const updateCollectionSchema = z.object({
     description: z.string().trim().max(300).optional(),
     parent: objectId.optional().nullable(),
     visibility: visibility.optional(),
+    pinned: z.boolean().optional(),
+    color: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, 'color must be a hex string like #a855f7')
+      .optional()
+      .nullable(),
+    archived: z.boolean().optional(),
   }),
   query: z.any(),
   params: z.object({ id: objectId }),

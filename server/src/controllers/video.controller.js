@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { Transform } from 'stream';
@@ -53,6 +54,19 @@ export async function persistUploadedFile(localPath, filename, mimeType) {
   return 'r2';
 }
 
+// Read once, hashed as it streams by — used to spot exact duplicate
+// uploads on the storage dashboard. Must run before persistUploadedFile,
+// since cloud storage may not leave the local temp file behind afterward.
+function hashFile(localPath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const stream = fs.createReadStream(localPath);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+    stream.on('error', reject);
+  });
+}
+
 export const createVideo = asyncHandler(async (req, res) => {
   const videoFile = req.files?.video?.[0];
   const thumbnailFile = req.files?.thumbnail?.[0];
@@ -68,6 +82,7 @@ export const createVideo = asyncHandler(async (req, res) => {
 
   await assertCategoryExists(req.body.category);
 
+  const fileHash = await hashFile(videoFile.path).catch(() => null);
   const storageProvider = await persistUploadedFile(videoFile.path, videoFile.filename, videoFile.mimetype);
   if (thumbnailFile) {
     await persistUploadedFile(thumbnailFile.path, thumbnailFile.filename, thumbnailFile.mimetype);
@@ -83,6 +98,7 @@ export const createVideo = asyncHandler(async (req, res) => {
     thumbnailFilename: thumbnailFile ? thumbnailFile.filename : null,
     mimeType: videoFile.mimetype,
     sizeBytes: videoFile.size,
+    fileHash,
     uploader: req.userId,
     storageProvider,
     visibility: req.body.visibility || 'public',
@@ -438,6 +454,7 @@ export const updateVideo = asyncHandler(async (req, res) => {
   }
   if (req.body.tags !== undefined) video.tags = req.body.tags;
   if (req.body.visibility !== undefined) video.visibility = req.body.visibility;
+  if (req.body.archived !== undefined) video.archived = req.body.archived;
 
   if (req.body.collections !== undefined) {
     // Allow collections you own outright, or ones you've been granted

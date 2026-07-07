@@ -8,6 +8,7 @@ const router = Router();
 
 router.get('/me', protect, userController.getMe);
 router.get('/me/export', protect, userController.exportUserData);
+router.get('/me/storage', protect, userController.getStorageStats);
 router.patch('/me', protect, userController.updateMe);
 router.put('/me/avatar', protect, uploadLimiter, uploadAvatar, userController.updateAvatar);
 router.delete('/me/avatar', protect, userController.deleteAvatar);

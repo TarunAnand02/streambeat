@@ -135,6 +135,21 @@ const videoSchema = new Schema(
       default: 'public',
       index: true,
     },
+    // SHA-256 of the uploaded file's bytes — lets the storage dashboard spot
+    // exact duplicate uploads. Only ever set for source:'upload' videos.
+    fileHash: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    // Hides a video from feeds/search/channel without deleting it — distinct
+    // from visibility, which is about *who* can see it; this is about
+    // whether it clutters your own library.
+    archived: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   { timestamps: true }
 );

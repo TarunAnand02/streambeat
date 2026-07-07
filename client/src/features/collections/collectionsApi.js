@@ -1,7 +1,7 @@
 import { axiosClient } from '../../lib/axiosClient';
 
-export async function fetchCollections() {
-  const { data } = await axiosClient.get('/collections');
+export async function fetchCollections(includeArchived = false) {
+  const { data } = await axiosClient.get('/collections', { params: { includeArchived } });
   return data.collections;
 }
 

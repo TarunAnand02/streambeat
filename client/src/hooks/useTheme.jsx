@@ -2,10 +2,11 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 const ThemeContext = createContext(null);
 const STORAGE_KEY = 'theme';
+const EXPLICIT_THEMES = ['light', 'dark', 'amoled', 'midnight', 'glassmorphism', 'cyberpunk'];
 
 function readStoredTheme() {
   const saved = localStorage.getItem(STORAGE_KEY);
-  return saved === 'light' || saved === 'dark' ? saved : 'system';
+  return EXPLICIT_THEMES.includes(saved) ? saved : 'system';
 }
 
 export function ThemeProvider({ children }) {

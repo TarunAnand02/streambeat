@@ -44,6 +44,75 @@
   --color-bg-translucent: rgba(255, 255, 255, 0.9);
 }
 
+/* True-black variant for OLED screens — deeper blacks than the default dark
+   theme, same accent/danger so nothing else needs to branch on it. */
+:root[data-theme='amoled'] {
+  --color-bg: #000000;
+  --color-surface: #0a0a0a;
+  --color-surface-raised: #161616;
+  --color-surface-hover: #202020;
+  --color-border: #1a1a1a;
+  --color-accent: #1db954;
+  --color-accent-hover: #1ed760;
+  --color-text: #ffffff;
+  --color-text-muted: #a0a0a0;
+  --color-text-subtle: #606060;
+  --color-danger: #f15e6c;
+  --color-bg-translucent: rgba(0, 0, 0, 0.92);
+}
+
+/* Deep blue-black with a cool accent — a moodier alternative to the
+   default dark theme rather than a true-black one. */
+:root[data-theme='midnight'] {
+  --color-bg: #0d1117;
+  --color-surface: #161b22;
+  --color-surface-raised: #21262d;
+  --color-surface-hover: #30363d;
+  --color-border: #30363d;
+  --color-accent: #4f8cff;
+  --color-accent-hover: #6ba1ff;
+  --color-text: #e6edf3;
+  --color-text-muted: #8b949e;
+  --color-text-subtle: #6e7681;
+  --color-danger: #f85149;
+  --color-bg-translucent: rgba(13, 17, 23, 0.9);
+}
+
+/* Translucent surfaces over a gradient backdrop — panels use semi-transparent
+   backgrounds so the gradient shows through; doesn't add backdrop-filter
+   blur to every component, so it's an approximation rather than true glass. */
+:root[data-theme='glassmorphism'] {
+  --color-bg: linear-gradient(160deg, #1e1b4b 0%, #312e81 45%, #1e3a5f 100%);
+  --color-surface: rgba(30, 27, 75, 0.45);
+  --color-surface-raised: rgba(49, 46, 129, 0.5);
+  --color-surface-hover: rgba(67, 56, 202, 0.55);
+  --color-border: rgba(199, 210, 254, 0.18);
+  --color-accent: #1db954;
+  --color-accent-hover: #1ed760;
+  --color-text: #f1f5f9;
+  --color-text-muted: #c7d2fe;
+  --color-text-subtle: #a5b4fc;
+  --color-danger: #fb7185;
+  --color-bg-translucent: rgba(30, 27, 75, 0.6);
+}
+
+/* Neon magenta-on-near-black — the boldest option, meant to be chosen
+   deliberately rather than blend in. */
+:root[data-theme='cyberpunk'] {
+  --color-bg: #0a0014;
+  --color-surface: #150a24;
+  --color-surface-raised: #1f1235;
+  --color-surface-hover: #2a1845;
+  --color-border: #3d2158;
+  --color-accent: #ff2e88;
+  --color-accent-hover: #ff5ca8;
+  --color-text: #f0e6ff;
+  --color-text-muted: #b39ddb;
+  --color-text-subtle: #7e5ca3;
+  --color-danger: #ff4757;
+  --color-bg-translucent: rgba(10, 0, 20, 0.9);
+}
+
 /* "System" preference (no explicit choice saved) — follow the OS, unless
    the user has explicitly forced dark mode. */
 @media (prefers-color-scheme: light) {

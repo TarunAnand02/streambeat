@@ -5,6 +5,21 @@
   margin-bottom: 20px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.archivedToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
 .newButton {
   padding: 10px 20px;
   border-radius: var(--radius-full);
@@ -46,11 +61,14 @@
 }
 
 .card {
+  position: relative;
   text-align: left;
   padding: 20px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
+  cursor: pointer;
+  overflow: hidden;
   transition:
     transform var(--duration-base) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out);
@@ -60,6 +78,67 @@
 .card:hover {
   transform: scale(1.02);
   border-color: var(--color-accent);
+}
+
+.cardArchived {
+  opacity: 0.6;
+}
+
+.colorBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.cardActions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.actionButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-subtle);
+}
+
+.actionButtonActive {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.colorSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--color-text-subtle);
+  background: transparent;
+}
+
+.colorInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .cardName {

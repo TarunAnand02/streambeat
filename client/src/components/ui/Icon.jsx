@@ -409,6 +409,24 @@ export function CaptionsIcon(props) {
   );
 }
 
+export function PinIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M9 4h6l-1 6 4 4v2h-6v5l-1 2-1-2v-5H4v-2l4-4Z" />
+    </svg>
+  );
+}
+
+export function ArchiveIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="4" width="18" height="4" rx="1" />
+      <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" />
+      <path d="M10 13h4" />
+    </svg>
+  );
+}
+
 export function FlameIcon(props) {
   return (
     <svg {...base} {...props}>

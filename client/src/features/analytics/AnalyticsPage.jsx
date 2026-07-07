@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Spinner from '../../components/ui/Spinner';
-import { formatViews } from '../../lib/formatDuration';
+import { formatBytes, formatViews } from '../../lib/formatDuration';
+import { fetchStorageStats } from '../settings/settingsApi';
 import uploadStyles from '../videos/UploadPage.module.css';
 import { fetchChannelAnalytics } from './analyticsApi';
 import CategoryBreakdown from './CategoryBreakdown';
@@ -11,6 +12,7 @@ import DailyViewsChart from './DailyViewsChart';
 export default function AnalyticsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [storage, setStorage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,6 +21,9 @@ export default function AnalyticsPage() {
         setData(result);
         setLoading(false);
       }
+    });
+    fetchStorageStats().then((result) => {
+      if (!cancelled) setStorage(result);
     });
     return () => {
       cancelled = true;
@@ -84,6 +89,53 @@ export default function AnalyticsPage() {
         <h2 className={styles.sectionHeading}>Views by category</h2>
         <CategoryBreakdown rows={data.viewsByCategory} />
       </section>
+
+      {storage && storage.videoCount > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionHeading}>Storage</h2>
+          <p className={styles.storageTotal}>
+            {formatBytes(storage.totalBytes)} used across {storage.videoCount} upload
+            {storage.videoCount === 1 ? '' : 's'}
+          </p>
+
+          {storage.largestVideos.length > 0 && (
+            <>
+              <h3 className={styles.storageSubheading}>Largest videos</h3>
+              <ul className={styles.topList}>
+                {storage.largestVideos.map((video) => (
+                  <li key={video._id} className={styles.topItem}>
+                    <Link className={styles.topTitle} to={`/watch/${video._id}`}>
+                      {video.title}
+                    </Link>
+                    <span className={styles.topStats}>{formatBytes(video.sizeBytes)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {storage.duplicates.length > 0 && (
+            <>
+              <h3 className={styles.storageSubheading}>Possible duplicate uploads</h3>
+              <p className={styles.hint}>
+                These share identical file content — safe to delete the extras.
+              </p>
+              {storage.duplicates.map((group) => (
+                <ul key={group[0]._id} className={styles.duplicateGroup}>
+                  {group.map((video) => (
+                    <li key={video._id} className={styles.topItem}>
+                      <Link className={styles.topTitle} to={`/watch/${video._id}`}>
+                        {video.title}
+                      </Link>
+                      <span className={styles.topStats}>{formatBytes(video.sizeBytes)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ))}
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }

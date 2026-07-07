@@ -33,6 +33,7 @@ export default function ChannelPage() {
   const [addToCollectionId, setAddToCollectionId] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
   const [subBusy, setSubBusy] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     // Wait for session restore to resolve first — on a fresh page load,
@@ -41,7 +42,7 @@ export default function ChannelPage() {
     if (!initialized) return;
     let cancelled = false;
     setLoading(true);
-    fetchChannel(userId).then((result) => {
+    fetchChannel(userId, showArchived).then((result) => {
       if (!cancelled) {
         setData(result);
         setLoading(false);
@@ -53,7 +54,7 @@ export default function ChannelPage() {
     return () => {
       cancelled = true;
     };
-  }, [userId, initialized]);
+  }, [userId, initialized, showArchived]);
 
   const isOwner = user?.id === userId;
 
@@ -211,6 +212,16 @@ export default function ChannelPage() {
             {data.isSubscribed ? 'Subscribed' : 'Subscribe'}
           </button>
         )}
+        {isOwner && (
+          <label className={styles.archivedToggle}>
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+            />
+            Show archived
+          </label>
+        )}
         {isOwner && data.videos.length > 0 && (
           <button
             className={styles.selectToggle}
@@ -265,7 +276,10 @@ export default function ChannelPage() {
       ) : (
         <div className={styles.grid}>
           {data.videos.map((video, index) => (
-            <div key={video._id} className={styles.gridItem}>
+            <div
+              key={video._id}
+              className={video.archived ? `${styles.gridItem} ${styles.gridItemArchived}` : styles.gridItem}
+            >
               <VideoCard
                 video={{ ...video, uploader: data.user }}
                 style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}

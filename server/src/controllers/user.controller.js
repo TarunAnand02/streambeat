@@ -55,6 +55,12 @@ export const getChannel = asyncHandler(async (req, res) => {
   // Only the owner sees their own unlisted/private videos on their channel
   // page — everyone else sees the same public-only view real platforms show.
   const videoFilter = isOwner ? { uploader: user._id } : { uploader: user._id, visibility: 'public' };
+  // Archiving only declutters the owner's own channel management view — an
+  // archived-but-public video is still fully visible to everyone else, the
+  // same way Gmail's Archive just leaves your own Inbox.
+  if (isOwner && req.query.includeArchived !== 'true') {
+    videoFilter.archived = { $ne: true };
+  }
   const videos = await Video.find(videoFilter).sort({ createdAt: -1 });
   const subscriberCount = await Subscription.countDocuments({ channel: user._id });
   const isSubscribed = req.userId
@@ -139,6 +145,38 @@ export const exportUserData = asyncHandler(async (req, res) => {
       positionSeconds: h.positionSeconds,
     })),
   });
+});
+
+// Creator-side housekeeping: how much space your uploads use, which ones
+// are biggest, and whether any are byte-for-byte duplicates of each other.
+export const getStorageStats = asyncHandler(async (req, res) => {
+  const videos = await Video.find({ uploader: req.userId, source: 'upload' })
+    .select('title sizeBytes fileHash createdAt variants')
+    .lean();
+
+  const totalBytes = videos.reduce((sum, v) => {
+    const variantBytes = (v.variants || []).reduce((s, variant) => s + (variant.sizeBytes || 0), 0);
+    return sum + (v.sizeBytes || 0) + variantBytes;
+  }, 0);
+
+  const largestVideos = [...videos]
+    .sort((a, b) => (b.sizeBytes || 0) - (a.sizeBytes || 0))
+    .slice(0, 10)
+    .map((v) => ({ _id: v._id, title: v.title, sizeBytes: v.sizeBytes || 0 }));
+
+  const hashGroups = {};
+  for (const v of videos) {
+    if (!v.fileHash) continue;
+    (hashGroups[v.fileHash] ??= []).push({
+      _id: v._id,
+      title: v.title,
+      sizeBytes: v.sizeBytes || 0,
+      createdAt: v.createdAt,
+    });
+  }
+  const duplicates = Object.values(hashGroups).filter((group) => group.length > 1);
+
+  res.json({ totalBytes, videoCount: videos.length, largestVideos, duplicates });
 });
 
 export const updateMe = asyncHandler(async (req, res) => {

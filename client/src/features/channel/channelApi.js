@@ -1,7 +1,9 @@
 import { axiosClient } from '../../lib/axiosClient';
 
-export async function fetchChannel(userId) {
-  const { data } = await axiosClient.get(`/users/${userId}/channel`);
+export async function fetchChannel(userId, includeArchived = false) {
+  const { data } = await axiosClient.get(`/users/${userId}/channel`, {
+    params: { includeArchived },
+  });
   return data;
 }
 

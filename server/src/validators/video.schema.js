@@ -40,6 +40,7 @@ export const updateVideoSchema = z.object({
     tags: tagsArray,
     collections: z.array(collectionId).max(50).optional(),
     visibility: z.enum(['public', 'unlisted', 'private']).optional(),
+    archived: z.boolean().optional(),
   }),
   query: z.any(),
   params: z.object({ id: objectId }),

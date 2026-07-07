@@ -11,6 +11,7 @@ export default function VideoEditPanel({ video, onSaved }) {
   const [description, setDescription] = useState(video.description || '');
   const [category, setCategory] = useState(video.category);
   const [visibility, setVisibility] = useState(video.visibility || 'public');
+  const [archived, setArchived] = useState(video.archived || false);
   const [tags, setTags] = useState(video.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [collections, setCollections] = useState([]);
@@ -83,6 +84,7 @@ export default function VideoEditPanel({ video, onSaved }) {
         description,
         category,
         visibility,
+        archived,
         tags,
         collections: [...selectedCollections],
       });
@@ -212,6 +214,23 @@ export default function VideoEditPanel({ video, onSaved }) {
           <option value="unlisted">Unlisted — only people with the link</option>
           <option value="private">Private — only you</option>
         </select>
+      </div>
+
+      <div className={styles.section}>
+        <label className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={archived}
+            onChange={(e) => setArchived(e.target.checked)}
+          />
+          <span>
+            <span className={styles.sectionLabel}>Archive this video</span>
+            <p className={styles.hint}>
+              Hides it from your channel's default view without deleting it or changing who can
+              watch it.
+            </p>
+          </span>
+        </label>
       </div>
 
       <div className={styles.section}>

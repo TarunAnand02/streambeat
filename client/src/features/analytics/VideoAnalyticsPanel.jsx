@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchVideoAnalytics } from './analyticsApi';
-import { ChartIcon } from '../../components/ui/Icon';
+import { ChartIcon, CloseIcon } from '../../components/ui/Icon';
 import DailyViewsChart from './DailyViewsChart';
 import styles from './VideoAnalyticsPanel.module.css';
 
@@ -24,6 +24,19 @@ export default function VideoAnalyticsPanel({ videoId }) {
 
   return (
     <div className={styles.panel}>
+      <div className={styles.panelHeader}>
+        <span className={styles.panelTitle}>
+          <ChartIcon className={styles.inlineIcon} /> Video analytics
+        </span>
+        <button
+          type="button"
+          className={styles.closeButton}
+          onClick={() => setOpen(false)}
+          aria-label="Close analytics"
+        >
+          <CloseIcon />
+        </button>
+      </div>
       {!data ? (
         <p className={styles.hint}>Loading…</p>
       ) : (

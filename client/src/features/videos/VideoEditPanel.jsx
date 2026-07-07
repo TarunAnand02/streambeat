@@ -111,6 +111,17 @@ export default function VideoEditPanel({ video, onSaved }) {
 
   return (
     <div className={styles.panel}>
+      <div className={styles.panelHeader}>
+        <span className={styles.panelTitle}>Edit video details</span>
+        <button
+          type="button"
+          className={styles.closeButton}
+          onClick={() => setOpen(false)}
+          aria-label="Close edit panel"
+        >
+          <CloseIcon />
+        </button>
+      </div>
       {error && <div className={styles.error}>{error}</div>}
 
       {video.source === 'upload' && (

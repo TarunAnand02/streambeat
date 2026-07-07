@@ -34,6 +34,35 @@
   margin-bottom: 12px;
 }
 
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.panelTitle {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+
+.closeButton:hover {
+  color: var(--color-text);
+}
+
 .section {
   margin-bottom: 16px;
 }

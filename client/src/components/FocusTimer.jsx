@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDownIcon, FlameIcon, TargetIcon, TimerIcon } from './ui/Icon';
+import { ChevronDownIcon, CloseIcon, FlameIcon, TargetIcon, TimerIcon } from './ui/Icon';
 import { useToast } from './toast/ToastProvider';
 import { fetchFocusStats, postFocusSession } from '../features/focus/focusApi';
 import styles from './FocusTimer.module.css';
@@ -24,6 +24,7 @@ function formatClock(totalSeconds) {
 // the minutes eventually logged to the server for streaks/recap.
 export default function FocusTimer({ videoId }) {
   const [expanded, setExpanded] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [phase, setPhase] = useState('focus');
   const [secondsLeft, setSecondsLeft] = useState(FOCUS_PRESETS[0].seconds);
   const [running, setRunning] = useState(false);
@@ -146,21 +147,46 @@ export default function FocusTimer({ videoId }) {
     setGoal('');
   }
 
+  // Fully hides the widget rather than just collapsing it to the pill —
+  // wraps up any in-progress session first so closing it never silently
+  // loses focus time that was already tracked.
+  async function handleClose() {
+    setRunning(false);
+    if (sessionActive) await submitSession();
+    setDismissed(true);
+  }
+
+  if (dismissed) return null;
+
   const streak = stats?.currentStreak ?? 0;
 
   if (!expanded) {
     return (
-      <button type="button" className={styles.pill} onClick={() => setExpanded(true)}>
-        <FlameIcon className={styles.pillFlame} />
-        <span>{streak}</span>
-        {running && (
-          <>
-            <span className={styles.pillDivider} />
-            <TimerIcon className={styles.pillTimer} />
-            <span className={styles.pillClock}>{formatClock(secondsLeft)}</span>
-          </>
-        )}
-      </button>
+      <div className={styles.pill}>
+        <button type="button" className={styles.pillMain} onClick={() => setExpanded(true)}>
+          <FlameIcon className={styles.pillFlame} />
+          <span>{streak}</span>
+          {running && (
+            <>
+              <span className={styles.pillDivider} />
+              <TimerIcon className={styles.pillTimer} />
+              <span className={styles.pillClock}>{formatClock(secondsLeft)}</span>
+            </>
+          )}
+        </button>
+        <button
+          type="button"
+          className={styles.pillClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose();
+          }}
+          title="Close"
+          aria-label="Close focus timer"
+        >
+          <CloseIcon />
+        </button>
+      </div>
     );
   }
 
@@ -171,14 +197,26 @@ export default function FocusTimer({ videoId }) {
           <TimerIcon className={styles.headerIcon} />
           {phase === 'focus' ? 'Focus session' : 'Break'}
         </span>
-        <button
-          type="button"
-          className={styles.collapseButton}
-          onClick={() => setExpanded(false)}
-          aria-label="Collapse"
-        >
-          <ChevronDownIcon />
-        </button>
+        <span className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.collapseButton}
+            onClick={() => setExpanded(false)}
+            title="Minimize"
+            aria-label="Minimize"
+          >
+            <ChevronDownIcon />
+          </button>
+          <button
+            type="button"
+            className={styles.collapseButton}
+            onClick={handleClose}
+            title="Close"
+            aria-label="Close focus timer"
+          >
+            <CloseIcon />
+          </button>
+        </span>
       </div>
 
       {recap ? (

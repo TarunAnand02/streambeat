@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Chapters from '../../components/Chapters';
 import FocusTimer from '../../components/FocusTimer';
+import KeyboardShortcutsModal from '../../components/KeyboardShortcutsModal';
 import TranscriptPanel from '../../components/TranscriptPanel';
 import Spinner from '../../components/ui/Spinner';
 import Avatar from '../../components/ui/Avatar';
@@ -9,8 +10,11 @@ import {
   AudioIcon,
   CaptionsIcon,
   FlagIcon,
+  HelpIcon,
   PipIcon,
   ShareIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
   TheaterIcon,
   ThumbsUpIcon,
 } from '../../components/ui/Icon';
@@ -66,6 +70,7 @@ export default function WatchPage() {
   const [audioOnly, setAudioOnly] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [captionsOn, setCaptionsOn] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const videoRef = useRef(null);
   const youtubeRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -312,6 +317,12 @@ export default function WatchPage() {
     return videoRef.current?.currentTime ?? 0;
   }, [video]);
 
+  const getDuration = useCallback(() => {
+    if (!video) return 0;
+    if (video.source === 'youtube') return youtubeRef.current?.getDuration() ?? 0;
+    return videoRef.current?.duration || 0;
+  }, [video]);
+
   const seekTo = useCallback(
     (seconds) => {
       if (!video) return;
@@ -369,6 +380,52 @@ export default function WatchPage() {
         case 't':
           setTheaterMode((v) => !v);
           break;
+        case 'arrowup':
+          e.preventDefault();
+          if (video.source === 'youtube') {
+            youtubeRef.current?.setVolume(Math.min(1, (youtubeRef.current?.getVolume() ?? 1) + 0.05));
+          } else if (videoRef.current) {
+            videoRef.current.volume = Math.min(1, videoRef.current.volume + 0.05);
+          }
+          break;
+        case 'arrowdown':
+          e.preventDefault();
+          if (video.source === 'youtube') {
+            youtubeRef.current?.setVolume(Math.max(0, (youtubeRef.current?.getVolume() ?? 1) - 0.05));
+          } else if (videoRef.current) {
+            videoRef.current.volume = Math.max(0, videoRef.current.volume - 0.05);
+          }
+          break;
+        case 'c':
+          if (video.source === 'upload' && video.captionFilename) {
+            setCaptionsOn((v) => !v);
+          }
+          break;
+        case 'home':
+          e.preventDefault();
+          seekTo(0);
+          break;
+        case 'end':
+          e.preventDefault();
+          seekTo(Math.max(0, getDuration() - 1));
+          break;
+        case '?':
+          setShowShortcuts((v) => !v);
+          break;
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9': {
+          const duration = getDuration();
+          if (duration > 0) seekTo((duration * Number(e.key)) / 10);
+          break;
+        }
         default:
           break;
       }
@@ -376,7 +433,7 @@ export default function WatchPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [video, seekTo, getCurrentTime]);
+  }, [video, seekTo, getCurrentTime, getDuration]);
 
   useDocumentMeta(video?.title, video?.description?.slice(0, 160));
 
@@ -457,6 +514,24 @@ export default function WatchPage() {
       )}
 
       <div className={styles.resolutionRow}>
+        <button
+          type="button"
+          className={styles.theaterButton}
+          onClick={() => seekTo(Math.max(0, getCurrentTime() - 5))}
+          title="Rewind 5 seconds (←)"
+          aria-label="Rewind 5 seconds"
+        >
+          <SkipBackIcon />
+        </button>
+        <button
+          type="button"
+          className={styles.theaterButton}
+          onClick={() => seekTo(getCurrentTime() + 5)}
+          title="Forward 5 seconds (→)"
+          aria-label="Forward 5 seconds"
+        >
+          <SkipForwardIcon />
+        </button>
         {video.source === 'upload' && video.variants?.length > 0 && (
           <select
             className={styles.resolutionSelect}
@@ -545,7 +620,18 @@ export default function WatchPage() {
         >
           <TheaterIcon />
         </button>
+        <button
+          type="button"
+          className={styles.theaterButton}
+          onClick={() => setShowShortcuts(true)}
+          title="Keyboard shortcuts (?)"
+          aria-label="Show keyboard shortcuts"
+        >
+          <HelpIcon />
+        </button>
       </div>
+
+      {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
 
       <h1 className={styles.title}>{video.title}</h1>
 

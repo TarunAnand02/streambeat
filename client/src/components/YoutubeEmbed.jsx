@@ -53,6 +53,12 @@ const YoutubeEmbed = forwardRef(function YoutubeEmbed({ videoId, title, onEnded,
       else p.mute();
     },
     setPlaybackRate: (rate) => playerRef.current?.setPlaybackRate?.(rate),
+    getDuration: () => playerRef.current?.getDuration?.() ?? 0,
+    // YouTube's volume scale is 0-100, unlike the native <video> element's
+    // 0-1 — callers pass/receive the native 0-1 scale and this converts, so
+    // the same keyboard-shortcut code works against either player.
+    getVolume: () => (playerRef.current?.getVolume?.() ?? 100) / 100,
+    setVolume: (volume) => playerRef.current?.setVolume?.(Math.round(volume * 100)),
   }));
 
   useEffect(() => {

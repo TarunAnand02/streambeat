@@ -17,6 +17,7 @@ export default function Topbar({ onMenuClick }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
+  const inputRef = useRef(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const showToast = useToast();
@@ -36,6 +37,21 @@ export default function Topbar({ onMenuClick }) {
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Global "/" to jump into search from anywhere — ignored while already
+  // typing somewhere else so it doesn't hijack normal text entry.
+  useEffect(() => {
+    function handleGlobalKeyDown(e) {
+      if (e.key !== '/') return;
+      const el = e.target;
+      const isTyping = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+      if (isTyping) return;
+      e.preventDefault();
+      inputRef.current?.focus();
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
   useEffect(() => {
@@ -105,6 +121,7 @@ export default function Topbar({ onMenuClick }) {
       <div className={styles.searchWrapper} ref={searchRef}>
         <form className={styles.searchForm} onSubmit={handleSubmit}>
           <input
+            ref={inputRef}
             className={styles.searchInput}
             type="search"
             placeholder="Search videos, or tag:xxxx"

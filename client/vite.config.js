@@ -23,12 +23,30 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Precache only the built app shell (JS/CSS/HTML) — video streams,
-        // thumbnails, and API responses are large/dynamic and must always
-        // hit the network, never be served stale from a cache.
+        // Precache only the built app shell (JS/CSS/HTML) — video streams
+        // and API responses are large/dynamic and must always hit the
+        // network, never be served stale from a cache.
         globPatterns: ['**/*.{js,css,html,svg}'],
         navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [],
+        // Images only (thumbnails/avatars) — genuinely public, non-user-
+        // specific content (already gated by unguessable ids, same as the
+        // rest of the media endpoints), so caching them by URL is safe.
+        // Deliberately NOT caching generic /api/* JSON here: this app
+        // supports switching between multiple logged-in accounts on the
+        // same device, and a URL-keyed cache would risk showing one
+        // account's cached data (history, notifications, etc.) to another
+        // account after switching while offline.
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'streambeat-images',
+              expiration: { maxEntries: 300, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],

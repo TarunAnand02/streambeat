@@ -61,6 +61,31 @@
   cursor: pointer;
 }
 
+.folderPickerLabel {
+  display: inline-block;
+  margin: -12px 0 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.folderPickerLabel:hover {
+  text-decoration: underline;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .field {
   display: flex;
   flex-direction: column;

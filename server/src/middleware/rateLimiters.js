@@ -130,3 +130,13 @@ export const urlImportLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: 'Import limit reached, please try again later.' },
 });
+
+// Public, unauthenticated, and accepts a password guess — a real
+// brute-force surface for any password-protected share link.
+export const shareAccessLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many attempts, please try again later.' },
+});

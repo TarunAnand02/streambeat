@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import CommandPalette from '../CommandPalette';
+import OfflineBanner from '../OfflineBanner';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import VerifyEmailBanner from '../VerifyEmailBanner';
@@ -18,6 +20,7 @@ export default function AppLayout() {
 
   return (
     <div className={styles.shell}>
+      <CommandPalette />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {sidebarOpen && (
         <button
@@ -29,6 +32,7 @@ export default function AppLayout() {
       )}
       <div className={styles.main}>
         <Topbar onMenuClick={() => setSidebarOpen((v) => !v)} />
+        <OfflineBanner />
         <VerifyEmailBanner />
         <div className={styles.content}>
           <div key={location.pathname} className={styles.pageEnter}>

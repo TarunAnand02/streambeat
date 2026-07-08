@@ -35,7 +35,16 @@ axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { config, response } = error;
-    if (response?.status !== 401 || config._retried || config.url?.includes('/auth/')) {
+    // /share-links/:token/access intentionally returns 401 for a wrong/
+    // missing password — that's not an expired-session case, so retrying
+    // it via token refresh would just waste a round trip before failing
+    // again with the same "wrong password" response.
+    if (
+      response?.status !== 401 ||
+      config._retried ||
+      config.url?.includes('/auth/') ||
+      config.url?.includes('/share-links/')
+    ) {
       return Promise.reject(error);
     }
     const userId = getActiveUserId();

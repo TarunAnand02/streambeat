@@ -20,6 +20,7 @@ import helpRoutes from './routes/help.routes.js';
 import historyRoutes from './routes/history.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import shareLinkRoutes from './routes/shareLink.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import userRoutes from './routes/user.routes.js';
 import videoRoutes from './routes/video.routes.js';
@@ -130,6 +131,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/focus-sessions', focusSessionRoutes);
 app.use('/api/achievements', achievementRoutes);
+app.use('/api/share-links', shareLinkRoutes);
 
 app.get('/robots.txt', getRobotsTxt);
 app.get('/sitemap.xml', getSitemap);

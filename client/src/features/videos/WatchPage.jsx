@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Chapters from '../../components/Chapters';
 import FocusTimer from '../../components/FocusTimer';
 import KeyboardShortcutsModal from '../../components/KeyboardShortcutsModal';
+import MiniPlayerCard from '../../components/MiniPlayerCard';
 import TranscriptPanel from '../../components/TranscriptPanel';
 import Spinner from '../../components/ui/Spinner';
 import Avatar from '../../components/ui/Avatar';
@@ -32,6 +33,7 @@ import { fetchCollection } from '../collections/collectionsApi';
 import { subscribe, unsubscribe } from '../channel/subscriptionsApi';
 import NotesPanel from './NotesPanel';
 import PlaylistPanel from './PlaylistPanel';
+import ShareLinksPanel from '../share/ShareLinksPanel';
 import VideoEditPanel from './VideoEditPanel';
 import {
   captionUrl,
@@ -71,6 +73,9 @@ export default function WatchPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [captionsOn, setCaptionsOn] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+  const [miniPlayerDismissed, setMiniPlayerDismissed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const videoRef = useRef(null);
   const youtubeRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -335,6 +340,67 @@ export default function WatchPage() {
     },
     [video]
   );
+
+  // Tracks real play/pause state via DOM events (native) or polling
+  // (YouTube, whose IFrame API only exposes a getter) — needed so the mini
+  // player's icon stays correct even when playback is toggled by the
+  // native browser controls rather than our own buttons/shortcuts.
+  useEffect(() => {
+    if (!video || video.source === 'youtube') return;
+    const el = videoRef.current;
+    if (!el) return;
+    function onPlay() {
+      setIsPlaying(true);
+    }
+    function onPause() {
+      setIsPlaying(false);
+    }
+    el.addEventListener('play', onPlay);
+    el.addEventListener('pause', onPause);
+    setIsPlaying(!el.paused);
+    return () => {
+      el.removeEventListener('play', onPlay);
+      el.removeEventListener('pause', onPause);
+    };
+  }, [video, resolution]);
+
+  useEffect(() => {
+    if (!video || video.source !== 'youtube' || !showMiniPlayer) return;
+    const timer = setInterval(() => {
+      const state = youtubeRef.current?.getPlayerState?.();
+      if (state !== undefined) setIsPlaying(state === 1); // YT.PlayerState.PLAYING
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [video, showMiniPlayer]);
+
+  // Shows a small floating mini player once the real player has scrolled
+  // out of view (e.g. reading comments/notes further down the page) —
+  // playback itself is untouched, this just surfaces quick controls.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowMiniPlayer(!entry.isIntersecting);
+        if (entry.isIntersecting) setMiniPlayerDismissed(false);
+      },
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [video?._id]);
+
+  function handleMiniPlayerTogglePlay() {
+    if (video.source === 'youtube') {
+      youtubeRef.current?.togglePlayPause?.();
+    } else if (videoRef.current) {
+      videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+    }
+  }
+
+  function handleMiniPlayerJumpBack() {
+    wrapperRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   // Keyboard shortcuts: ignore while typing in an input/textarea/editable
   // element so they don't hijack normal text entry (e.g. the notes box).
@@ -721,11 +787,30 @@ export default function WatchPage() {
 
       {studyMode && <FocusTimer videoId={videoId} playerRef={wrapperRef} />}
 
+      {showMiniPlayer && !miniPlayerDismissed && (
+        <MiniPlayerCard
+          title={video.title}
+          thumbnailSrc={
+            video.source === 'youtube'
+              ? video.youtubeThumbnailUrl
+              : video.thumbnailFilename
+                ? thumbnailUrl(video._id)
+                : null
+          }
+          isPlaying={isPlaying}
+          onTogglePlay={handleMiniPlayerTogglePlay}
+          onJumpBack={handleMiniPlayerJumpBack}
+          onClose={() => setMiniPlayerDismissed(true)}
+        />
+      )}
+
       {chapters.length > 0 && <Chapters chapters={chapters} onSeek={seekTo} />}
 
       {video.captionFilename && <TranscriptPanel videoId={videoId} onSeek={seekTo} />}
 
       {isOwner && <VideoAnalyticsPanel videoId={videoId} />}
+
+      {isOwner && <ShareLinksPanel videoId={videoId} />}
 
       {isOwner && <VideoEditPanel video={video} onSaved={setVideo} />}
 

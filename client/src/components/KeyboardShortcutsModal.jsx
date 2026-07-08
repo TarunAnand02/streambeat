@@ -30,6 +30,7 @@ const GROUPS = [
     title: 'Navigation',
     shortcuts: [
       { keys: ['/'], description: 'Focus search' },
+      { keys: ['Ctrl', 'K'], description: 'Open command palette' },
       { keys: ['?'], description: 'Show this list' },
     ],
   },

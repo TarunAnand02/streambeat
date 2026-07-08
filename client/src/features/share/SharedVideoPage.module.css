@@ -1,0 +1,105 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.embedWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.embedWrapper > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.video {
+  object-fit: contain;
+  background: #000;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.uploader {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.description {
+  font-size: 14px;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  margin-bottom: 16px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+}
+
+.message {
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.passwordForm {
+  max-width: 340px;
+  margin: 60px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.heading {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.passwordInput {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.passwordInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.submitButton {
+  padding: 10px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--color-accent);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -134,6 +134,15 @@ export default function UploadPage() {
     e.target.value = '';
   }
 
+  // webkitdirectory hands back every file in the folder (recursively) as a
+  // flat FileList — addFiles already filters that down to just the video
+  // MIME types, so non-video files nested in the folder are silently
+  // skipped rather than needing separate handling here.
+  async function handleFolderSelected(e) {
+    await addFiles(e.target.files);
+    e.target.value = '';
+  }
+
   // Track enter/leave depth so hovering over a child element (e.g. the label
   // text) doesn't flicker the drop zone's highlighted state off and on.
   function handleDragEnter(e) {
@@ -225,6 +234,21 @@ export default function UploadPage() {
           onChange={handleFilesSelected}
         />
       </div>
+
+      <label className={styles.folderPickerLabel}>
+        Or select an entire folder
+        <input
+          type="file"
+          className={styles.visuallyHidden}
+          // webkitdirectory is the de facto standard for folder selection —
+          // supported by all Chromium/Firefox/Safari, just non-standard
+          // enough that React doesn't type it, hence the plain attribute.
+          webkitdirectory=""
+          directory=""
+          multiple
+          onChange={handleFolderSelected}
+        />
+      </label>
 
       {hasItems && (
         <>

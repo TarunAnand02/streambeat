@@ -32,6 +32,7 @@ const NotificationsPage = lazy(() => import('./features/notifications/Notificati
 const AdminReportsPage = lazy(() => import('./features/reports/AdminReportsPage'));
 const SearchResultsPage = lazy(() => import('./features/videos/SearchResultsPage'));
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
+const SharedVideoPage = lazy(() => import('./features/share/SharedVideoPage'));
 const UploadPage = lazy(() => import('./features/videos/UploadPage'));
 const WatchPage = lazy(() => import('./features/videos/WatchPage'));
 
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/channel/:userId" element={<ChannelPage />} />
           <Route path="/collections/:id" element={<CollectionDetailPage />} />
+          <Route path="/share/:token" element={<SharedVideoPage />} />
           <Route path="/help" element={<HelpPage />} />
 
           <Route element={<ProtectedRoute />}>

@@ -59,6 +59,7 @@ const YoutubeEmbed = forwardRef(function YoutubeEmbed({ videoId, title, onEnded,
     // the same keyboard-shortcut code works against either player.
     getVolume: () => (playerRef.current?.getVolume?.() ?? 100) / 100,
     setVolume: (volume) => playerRef.current?.setVolume?.(Math.round(volume * 100)),
+    getPlayerState: () => playerRef.current?.getPlayerState?.(),
   }));
 
   useEffect(() => {

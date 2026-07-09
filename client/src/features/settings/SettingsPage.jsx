@@ -341,6 +341,12 @@ export default function SettingsPage() {
               className={styles.input}
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
+              // Chrome treats an email input immediately followed by a
+              // password field as a login form and autofills both from a
+              // saved credential (including silently overwriting this with
+              // the account's *current* email) unless explicitly told not
+              // to — off here, and new-password below, break that pairing.
+              autoComplete="off"
               required
             />
           </div>
@@ -352,7 +358,12 @@ export default function SettingsPage() {
               <PasswordInput
                 id="emailPassword"
                 className={styles.input}
-                autoComplete="current-password"
+                // Deliberately not "current-password" — that value is
+                // exactly what invites Chrome to auto-fill this field (and
+                // pair it with the email input above) from a saved login.
+                // This is a re-entry confirmation, not a login, so the
+                // field should always start empty.
+                autoComplete="new-password"
                 value={emailPassword}
                 onChange={(e) => setEmailPassword(e.target.value)}
                 required

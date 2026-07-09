@@ -183,12 +183,28 @@ export const getStorageStats = asyncHandler(async (req, res) => {
   res.json({ totalBytes, videoCount: videos.length, largestVideos, duplicates });
 });
 
+const NOTIFICATION_TYPES = [
+  'subscribe',
+  'comment',
+  'like',
+  'reply',
+  'achievement',
+  'transcode_complete',
+  'collection_add',
+];
+
 export const updateMe = asyncHandler(async (req, res) => {
   // Avatar changes go exclusively through updateAvatar/deleteAvatar below,
   // which keep avatarUrl in sync with avatarFilename/avatarStorageProvider —
   // accepting an arbitrary avatarUrl here would let the two drift apart.
-  const { bio, studyModeEnabled, weeklyGoalMinutes, autoRemoveCompletedFromContinueWatching } =
-    req.body;
+  const {
+    bio,
+    studyModeEnabled,
+    weeklyGoalMinutes,
+    autoRemoveCompletedFromContinueWatching,
+    autoplayEnabled,
+    notificationPrefs,
+  } = req.body;
   if (
     weeklyGoalMinutes !== undefined &&
     weeklyGoalMinutes !== null &&
@@ -196,6 +212,16 @@ export const updateMe = asyncHandler(async (req, res) => {
   ) {
     throw new ApiError(400, 'weeklyGoalMinutes must be a number between 0 and 10080, or null');
   }
+
+  const notificationPrefUpdates = {};
+  if (notificationPrefs && typeof notificationPrefs === 'object') {
+    for (const [key, value] of Object.entries(notificationPrefs)) {
+      if (NOTIFICATION_TYPES.includes(key) && typeof value === 'boolean') {
+        notificationPrefUpdates[`notificationPrefs.${key}`] = value;
+      }
+    }
+  }
+
   const user = await User.findByIdAndUpdate(
     req.userId,
     {
@@ -206,6 +232,8 @@ export const updateMe = asyncHandler(async (req, res) => {
         ...(autoRemoveCompletedFromContinueWatching !== undefined && {
           autoRemoveCompletedFromContinueWatching,
         }),
+        ...(autoplayEnabled !== undefined && { autoplayEnabled }),
+        ...notificationPrefUpdates,
       },
     },
     { new: true, runValidators: true, select: '+passwordHash' }

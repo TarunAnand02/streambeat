@@ -212,7 +212,24 @@ function buildVideoFilter(query) {
     if (query.minDuration !== undefined) filter.durationSeconds.$gte = query.minDuration;
     if (query.maxDuration !== undefined) filter.durationSeconds.$lte = query.maxDuration;
   }
+  if (query.source) filter.source = query.source;
   return filter;
+}
+
+// Shared by listVideos and searchVideos — 'relevance' (text-search score) is
+// only meaningful for searchVideos, which falls back to 'newest' otherwise.
+function sortFor(sort, { hasTextScore = false } = {}) {
+  switch (sort) {
+    case 'oldest':
+      return { createdAt: 1 };
+    case 'most_viewed':
+      return { views: -1 };
+    case 'relevance':
+      return hasTextScore ? { score: { $meta: 'textScore' } } : { createdAt: -1 };
+    case 'newest':
+    default:
+      return { createdAt: -1 };
+  }
 }
 
 export const listVideos = asyncHandler(async (req, res) => {
@@ -221,7 +238,7 @@ export const listVideos = asyncHandler(async (req, res) => {
   const filter = buildVideoFilter(req.query);
 
   const videos = await Video.find(filter)
-    .sort({ createdAt: -1 })
+    .sort(sortFor(req.query.sort))
     .skip((page - 1) * limit)
     .limit(limit)
     .populate('uploader', 'username avatarUrl')
@@ -809,7 +826,7 @@ export const searchVideos = asyncHandler(async (req, res) => {
   const filter = { ...buildVideoFilter(req.query), $text: { $search: q } };
 
   const videos = await Video.find(filter, { score: { $meta: 'textScore' } })
-    .sort({ score: { $meta: 'textScore' } })
+    .sort(sortFor(req.query.sort || 'relevance', { hasTextScore: true }))
     .limit(50)
     .populate('uploader', 'username avatarUrl')
     .lean();

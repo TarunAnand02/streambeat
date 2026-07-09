@@ -1,4 +1,5 @@
 import { Notification } from '../models/Notification.js';
+import { User } from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -19,6 +20,8 @@ const SELF_NOTIFY_TYPES = new Set(['achievement', 'transcode_complete']);
 export async function createNotification({ recipient, type, actor, video, meta }) {
   if (!SELF_NOTIFY_TYPES.has(type) && recipient.toString() === actor.toString()) return;
   try {
+    const recipientUser = await User.findById(recipient).select(`notificationPrefs.${type}`).lean();
+    if (recipientUser?.notificationPrefs?.[type] === false) return;
     await Notification.create({ recipient, type, actor, video, meta: meta ?? null });
   } catch {
     // best-effort — a notification failing to save shouldn't surface to the user

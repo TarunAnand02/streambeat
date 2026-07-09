@@ -105,6 +105,26 @@ const userSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    // When true (default), reaching the end of a video outside a playlist
+    // auto-advances to a recommended "up next" video, same as within a
+    // playlist — off just leaves playback stopped at the end.
+    autoplayEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    // Per-notification-type opt-outs, one flag per Notification.type value —
+    // all default true so existing users see no behavior change. Checked by
+    // createNotification before it fires.
+    notificationPrefs: {
+      _id: false,
+      subscribe: { type: Boolean, default: true },
+      comment: { type: Boolean, default: true },
+      like: { type: Boolean, default: true },
+      reply: { type: Boolean, default: true },
+      achievement: { type: Boolean, default: true },
+      transcode_complete: { type: Boolean, default: true },
+      collection_add: { type: Boolean, default: true },
+    },
     // "Not interested" / "don't recommend this channel" — internal
     // recommendation-tuning state, never exposed to any other user, so kept
     // out of the default projection like the other select:false fields.

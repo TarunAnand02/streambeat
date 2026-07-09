@@ -38,6 +38,7 @@ import VideoEditPanel from './VideoEditPanel';
 import {
   captionUrl,
   deleteVideo,
+  fetchRecommended,
   fetchVideo,
   registerView,
   streamUrl,
@@ -60,6 +61,7 @@ export default function WatchPage() {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [playlist, setPlaylist] = useState(null);
+  const [autoplayCandidate, setAutoplayCandidate] = useState(null);
   const [resolution, setResolution] = useState('auto');
   const [playbackRate, setPlaybackRate] = useState(1);
   const [subBusy, setSubBusy] = useState(false);
@@ -159,9 +161,35 @@ export default function WatchPage() {
     [navigate, playlistId]
   );
 
+  // Only fetched outside a playlist — a playlist already has its own
+  // well-defined "next", so recommendations would just be a second,
+  // conflicting notion of "up next" for the same video.
+  useEffect(() => {
+    if (playlistId) {
+      setAutoplayCandidate(null);
+      return;
+    }
+    let cancelled = false;
+    fetchRecommended()
+      .then((videos) => {
+        if (cancelled) return;
+        setAutoplayCandidate(videos.find((v) => v._id !== videoId) || null);
+      })
+      .catch(() => {
+        if (!cancelled) setAutoplayCandidate(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [videoId, playlistId]);
+
   const handleEnded = useCallback(() => {
-    if (nextInPlaylist) goToPlaylistVideo(nextInPlaylist);
-  }, [nextInPlaylist, goToPlaylistVideo]);
+    if (nextInPlaylist) {
+      goToPlaylistVideo(nextInPlaylist);
+    } else if (user?.autoplayEnabled !== false && autoplayCandidate) {
+      navigate(`/watch/${autoplayCandidate._id}`);
+    }
+  }, [nextInPlaylist, goToPlaylistVideo, user, autoplayCandidate, navigate]);
 
   useEffect(() => {
     // Wait for session restore first — firing before the access token is
@@ -181,6 +209,11 @@ export default function WatchPage() {
         // YouTube-sourced video, YoutubeEmbed's onReady callback seeks
         // instead (the iframe player isn't ready this early).
         if (data.resumeAt) resumeTimeRef.current = data.resumeAt;
+        // An explicit timestamp in the URL (from a "copy link at current
+        // time" share) wins over the account's own resume position — it's
+        // the sender's intent, not a stale personal watch position.
+        const sharedTimestamp = Number(searchParams.get('t'));
+        if (sharedTimestamp > 0) resumeTimeRef.current = sharedTimestamp;
         if (data.playbackPrefs) {
           setResolution(data.playbackPrefs.resolution || 'auto');
           setPlaybackRate(data.playbackPrefs.playbackRate || 1);
@@ -304,6 +337,20 @@ export default function WatchPage() {
     try {
       await navigator.clipboard.writeText(window.location.href);
       showToast('Link copied to clipboard', { type: 'success' });
+    } catch {
+      showToast('Could not copy link', { type: 'error' });
+    }
+  }
+
+  async function handleShareAtTimestamp() {
+    const seconds = Math.floor(getCurrentTime());
+    const url = new URL(window.location.href);
+    url.searchParams.set('t', seconds);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      showToast(`Link copied — starts at ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`, {
+        type: 'success',
+      });
     } catch {
       showToast('Could not copy link', { type: 'error' });
     }
@@ -816,6 +863,10 @@ export default function WatchPage() {
         <button className={styles.pillButton} onClick={handleShare}>
           <ShareIcon className={styles.likeIcon} />
           Share
+        </button>
+        <button className={styles.pillButton} onClick={handleShareAtTimestamp} title="Copy a link that starts at this moment">
+          <ShareIcon className={styles.likeIcon} />
+          Share at this time
         </button>
         {isOwner && <SaveToCollectionMenu video={video} onUpdated={setVideo} variant="labeled" />}
         {isOwner && (

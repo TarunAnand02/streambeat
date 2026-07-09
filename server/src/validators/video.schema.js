@@ -96,6 +96,8 @@ export const listVideosSchema = z.object({
     collectionId: collectionId.optional(),
     minDuration: z.coerce.number().min(0).optional(),
     maxDuration: z.coerce.number().min(0).optional(),
+    source: z.enum(['upload', 'youtube']).optional(),
+    sort: z.enum(['newest', 'oldest', 'most_viewed', 'relevance']).optional(),
   }),
   params: z.any(),
 });
@@ -114,6 +116,8 @@ export const searchSchema = z.object({
     collectionId: collectionId.optional(),
     minDuration: z.coerce.number().min(0).optional(),
     maxDuration: z.coerce.number().min(0).optional(),
+    source: z.enum(['upload', 'youtube']).optional(),
+    sort: z.enum(['newest', 'oldest', 'most_viewed', 'relevance']).optional(),
   }),
   params: z.any(),
 });

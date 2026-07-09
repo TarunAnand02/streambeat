@@ -8,3 +8,18 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 20px 16px;
 }
+
+.filterRow {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0 20px;
+}
+
+.select {
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+}

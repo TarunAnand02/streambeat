@@ -94,6 +94,29 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleToggleAutoplay() {
+    const next = !(user.autoplayEnabled ?? true);
+    dispatch(updateUser({ ...user, autoplayEnabled: next }));
+    try {
+      await updateProfile({ autoplayEnabled: next });
+    } catch {
+      dispatch(updateUser({ ...user, autoplayEnabled: !next }));
+      showToast('Could not update this setting', { type: 'error' });
+    }
+  }
+
+  async function handleToggleNotificationPref(type) {
+    const prevPrefs = user.notificationPrefs || {};
+    const next = { ...prevPrefs, [type]: !(prevPrefs[type] ?? true) };
+    dispatch(updateUser({ ...user, notificationPrefs: next }));
+    try {
+      await updateProfile({ notificationPrefs: { [type]: next[type] } });
+    } catch {
+      dispatch(updateUser({ ...user, notificationPrefs: prevPrefs }));
+      showToast('Could not update this setting', { type: 'error' });
+    }
+  }
+
   async function handleExport() {
     setExporting(true);
     try {
@@ -268,6 +291,38 @@ export default function SettingsPage() {
             </p>
           </span>
         </label>
+        <label className={styles.checkboxRow}>
+          <input type="checkbox" checked={user?.autoplayEnabled ?? true} onChange={handleToggleAutoplay} />
+          <span>
+            <span className={styles.checkboxLabel}>Autoplay next video</span>
+            <p className={styles.checkboxHint}>
+              When a video ends outside a playlist, automatically play a recommended one next.
+            </p>
+          </span>
+        </label>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionHeading}>Notifications</h2>
+        <p className={styles.hint}>Choose which activity notifies you.</p>
+        {[
+          { type: 'subscribe', label: 'New subscribers' },
+          { type: 'comment', label: 'Comments on your videos' },
+          { type: 'reply', label: 'Replies to your comments' },
+          { type: 'like', label: 'Likes on your videos' },
+          { type: 'collection_add', label: 'Added to a shared collection' },
+          { type: 'achievement', label: 'Achievements unlocked' },
+          { type: 'transcode_complete', label: 'Upload processing finished' },
+        ].map(({ type, label }) => (
+          <label key={type} className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={user?.notificationPrefs?.[type] ?? true}
+              onChange={() => handleToggleNotificationPref(type)}
+            />
+            <span className={styles.checkboxLabel}>{label}</span>
+          </label>
+        ))}
       </section>
 
       <section className={styles.section}>

@@ -15,10 +15,14 @@ export default function SearchResultsPage() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('all');
   const [durationBucket, setDurationBucket] = useState(null);
+  const [source, setSource] = useState('all');
+  const [sort, setSort] = useState('relevance');
 
   useEffect(() => {
     setCategory('all');
     setDurationBucket(null);
+    setSource('all');
+    setSort('relevance');
   }, [q, tag]);
 
   useEffect(() => {
@@ -34,6 +38,8 @@ export default function SearchResultsPage() {
       category,
       minDuration: bucket?.minDuration,
       maxDuration: bucket?.maxDuration,
+      source: source !== 'all' ? source : undefined,
+      sort,
     };
     const request = tag
       ? fetchVideos(1, { ...filters, tags: [tag] }).then((data) => data.videos)
@@ -47,7 +53,7 @@ export default function SearchResultsPage() {
     return () => {
       cancelled = true;
     };
-  }, [q, tag, category, durationBucket]);
+  }, [q, tag, category, durationBucket, source, sort]);
 
   return (
     <div>
@@ -55,6 +61,20 @@ export default function SearchResultsPage() {
 
       <CategoryChips selected={category} onSelect={setCategory} />
       <DurationFilter selected={durationBucket} onSelect={setDurationBucket} />
+
+      <div className={styles.filterRow}>
+        <select className={styles.select} value={source} onChange={(e) => setSource(e.target.value)}>
+          <option value="all">All sources</option>
+          <option value="upload">Uploads</option>
+          <option value="youtube">YouTube imports</option>
+        </select>
+        <select className={styles.select} value={sort} onChange={(e) => setSort(e.target.value)}>
+          {!tag && <option value="relevance">Most relevant</option>}
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="most_viewed">Most viewed</option>
+        </select>
+      </div>
 
       {loading ? (
         <VideoCardSkeleton />

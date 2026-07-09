@@ -1,7 +1,10 @@
 import { axiosClient } from '../../lib/axiosClient';
 import { API_BASE_URL as baseURL } from '../../lib/apiBaseUrl';
 
-export async function fetchVideos(page = 1, { category, minDuration, maxDuration, tags, collectionId } = {}) {
+export async function fetchVideos(
+  page = 1,
+  { category, minDuration, maxDuration, tags, collectionId, source, sort } = {}
+) {
   const { data } = await axiosClient.get('/videos', {
     params: {
       page,
@@ -10,6 +13,8 @@ export async function fetchVideos(page = 1, { category, minDuration, maxDuration
       ...(maxDuration !== undefined ? { maxDuration } : {}),
       ...(tags?.length ? { tags: tags.join(',') } : {}),
       ...(collectionId ? { collectionId } : {}),
+      ...(source ? { source } : {}),
+      ...(sort ? { sort } : {}),
     },
   });
   return data;
@@ -26,7 +31,10 @@ export async function fetchVideo(id) {
   };
 }
 
-export async function searchVideos(q, { category, minDuration, maxDuration, tags, collectionId } = {}) {
+export async function searchVideos(
+  q,
+  { category, minDuration, maxDuration, tags, collectionId, source, sort } = {}
+) {
   const { data } = await axiosClient.get('/videos/search', {
     params: {
       q,
@@ -35,6 +43,8 @@ export async function searchVideos(q, { category, minDuration, maxDuration, tags
       ...(maxDuration !== undefined ? { maxDuration } : {}),
       ...(tags?.length ? { tags: tags.join(',') } : {}),
       ...(collectionId ? { collectionId } : {}),
+      ...(source ? { source } : {}),
+      ...(sort ? { sort } : {}),
     },
   });
   return data.videos;

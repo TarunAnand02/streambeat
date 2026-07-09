@@ -76,6 +76,8 @@ export function toPublicUser(user) {
     focusStats: user.focusStats,
     weeklyGoalMinutes: user.weeklyGoalMinutes,
     autoRemoveCompletedFromContinueWatching: user.autoRemoveCompletedFromContinueWatching,
+    autoplayEnabled: user.autoplayEnabled,
+    notificationPrefs: user.notificationPrefs,
   };
 }
 

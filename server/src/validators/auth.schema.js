@@ -67,6 +67,26 @@ export const changePasswordSchema = z.object({
   params: z.any(),
 });
 
+export const changeEmailSchema = z.object({
+  body: z.object({
+    newEmail: z.string().trim().toLowerCase().email('Invalid email address'),
+    // Optional — accounts with no local password (Google/GitHub sign-in
+    // only) have nothing to check it against; see changeEmail in
+    // auth.controller.js.
+    password: z.string().optional(),
+  }),
+  query: z.any(),
+  params: z.any(),
+});
+
+export const confirmEmailChangeSchema = z.object({
+  body: z.object({
+    token: z.string().min(1, 'Confirmation token is required'),
+  }),
+  query: z.any(),
+  params: z.any(),
+});
+
 export const verifyLogin2faSchema = z.object({
   body: z.object({
     tempToken: z.string().min(1, 'Login attempt token is required'),

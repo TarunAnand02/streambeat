@@ -6,7 +6,13 @@ import { Session } from '../models/Session.js';
 import { User } from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { isMailerConfigured, sendPasswordResetEmail, sendVerificationEmail } from '../utils/mailer.js';
+import {
+  isMailerConfigured,
+  sendEmailChangeAlert,
+  sendEmailChangeConfirmation,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from '../utils/mailer.js';
 import {
   refreshCookieName,
   refreshCookieOptions,
@@ -78,6 +84,7 @@ export function toPublicUser(user) {
     autoRemoveCompletedFromContinueWatching: user.autoRemoveCompletedFromContinueWatching,
     autoplayEnabled: user.autoplayEnabled,
     notificationPrefs: user.notificationPrefs,
+    pendingEmail: user.pendingEmail,
   };
 }
 
@@ -314,7 +321,7 @@ export const refresh = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid or expired refresh token');
   }
 
-  const user = await User.findById(payload.sub).select('+passwordHash');
+  const user = await User.findById(payload.sub).select('+passwordHash +pendingEmail');
   if (!user || user.refreshTokenVersion !== payload.ver) {
     throw new ApiError(401, 'Refresh token has been revoked');
   }
@@ -499,4 +506,91 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   const accessToken = await issueSession(req, res, user);
   res.json({ user: toPublicUser(user), accessToken });
+});
+
+// Doesn't touch `email` yet — see the pendingEmail* fields' comment in the
+// User model. Requires the current password (like changePassword/disable2fa)
+// so a hijacked-but-still-logged-in session alone can't redirect the
+// account's password-reset/security mail to an attacker's inbox.
+export const changeEmail = asyncHandler(async (req, res) => {
+  const { newEmail, password } = req.body;
+
+  const user = await User.findById(req.userId).select('+passwordHash');
+  if (!user) throw new ApiError(404, 'User not found');
+
+  if (user.passwordHash) {
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) throw new ApiError(401, 'Incorrect password');
+  }
+
+  if (newEmail === user.email) {
+    throw new ApiError(400, 'That is already your current email address');
+  }
+  const taken = await User.exists({ email: newEmail });
+  if (taken) throw new ApiError(409, 'That email is already in use');
+
+  const rawToken = crypto.randomBytes(VERIFY_TOKEN_BYTES).toString('hex');
+  user.pendingEmail = newEmail;
+  user.pendingEmailTokenHash = hashResetToken(rawToken);
+  user.pendingEmailExpires = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
+  await user.save();
+
+  const confirmUrl = `${env.clientOrigin}/confirm-email-change?token=${rawToken}`;
+  if (isMailerConfigured()) {
+    sendEmailChangeConfirmation(newEmail, confirmUrl).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[change-email] send failed for "${newEmail}": ${err.message}` +
+          (env.isProd ? '' : ` — link: ${confirmUrl}`)
+      );
+    });
+    sendEmailChangeAlert(user.email, newEmail).catch(() => {});
+  } else if (!env.isProd) {
+    // eslint-disable-next-line no-console
+    console.log(`[change-email] ${newEmail} -> ${confirmUrl}`);
+  }
+
+  res.json({
+    message: 'Confirmation email sent to your new address.',
+    ...(env.isProd ? {} : { devConfirmUrl: confirmUrl }),
+  });
+});
+
+export const confirmEmailChange = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  const tokenHash = hashResetToken(token);
+
+  const user = await User.findOne({
+    pendingEmailTokenHash: tokenHash,
+    pendingEmailExpires: { $gt: new Date() },
+  }).select('+passwordHash +pendingEmail +pendingEmailTokenHash +pendingEmailExpires');
+  if (!user) {
+    throw new ApiError(400, 'That confirmation link is invalid or has expired');
+  }
+
+  user.email = user.pendingEmail;
+  user.emailVerified = true;
+  user.pendingEmail = null;
+  user.pendingEmailTokenHash = null;
+  user.pendingEmailExpires = null;
+  try {
+    await user.save();
+  } catch (err) {
+    // Someone else claimed the address in the time this link sat unused.
+    if (err.code === 11000) {
+      throw new ApiError(409, 'That email is now in use by another account — request the change again');
+    }
+    throw err;
+  }
+
+  res.json({ user: toPublicUser(user) });
+});
+
+export const cancelEmailChange = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(req.userId, {
+    pendingEmail: null,
+    pendingEmailTokenHash: null,
+    pendingEmailExpires: null,
+  });
+  res.status(204).send();
 });

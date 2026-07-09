@@ -17,7 +17,7 @@ import { deleteFileFromCloud, getFileStream } from '../utils/storage.js';
 const ACTIVITY_LIMIT = 15;
 
 export const getMe = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.userId).select('+passwordHash');
+  const user = await User.findById(req.userId).select('+passwordHash +pendingEmail');
   if (!user) throw new ApiError(404, 'User not found');
   res.json({ user: toPublicUser(user) });
 });
@@ -236,7 +236,7 @@ export const updateMe = asyncHandler(async (req, res) => {
         ...notificationPrefUpdates,
       },
     },
-    { new: true, runValidators: true, select: '+passwordHash' }
+    { new: true, runValidators: true, select: '+passwordHash +pendingEmail' }
   );
   if (!user) throw new ApiError(404, 'User not found');
   res.json({ user: toPublicUser(user) });

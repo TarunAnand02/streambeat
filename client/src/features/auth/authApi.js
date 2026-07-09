@@ -36,3 +36,17 @@ export async function resendVerification() {
   const { data } = await axiosClient.post('/auth/resend-verification');
   return data;
 }
+
+export async function changeEmail(newEmail, password) {
+  const { data } = await axiosClient.post('/auth/change-email', { newEmail, password });
+  return data;
+}
+
+export async function confirmEmailChange(token) {
+  const { data } = await axiosClient.post('/auth/confirm-email-change', { token });
+  return data.user;
+}
+
+export async function cancelEmailChange() {
+  await axiosClient.post('/auth/cancel-email-change');
+}

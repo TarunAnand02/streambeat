@@ -18,6 +18,7 @@ const LoginPage = lazy(() => import('./features/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./features/auth/RegisterPage'));
 const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage'));
 const VerifyEmailPage = lazy(() => import('./features/auth/VerifyEmailPage'));
+const ConfirmEmailChangePage = lazy(() => import('./features/auth/ConfirmEmailChangePage'));
 const OAuthCallbackPage = lazy(() => import('./features/auth/OAuthCallbackPage'));
 const AnalyticsPage = lazy(() => import('./features/analytics/AnalyticsPage'));
 const ChannelPage = lazy(() => import('./features/channel/ChannelPage'));
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
         <Route path="/oauth-callback" element={<OAuthCallbackPage />} />
 
         <Route element={<AppLayout />}>

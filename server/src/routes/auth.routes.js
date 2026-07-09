@@ -12,7 +12,9 @@ import {
 } from '../middleware/rateLimiters.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
+  changeEmailSchema,
   changePasswordSchema,
+  confirmEmailChangeSchema,
   disable2faSchema,
   enable2faSchema,
   forgotPasswordSchema,
@@ -58,6 +60,20 @@ router.post(
   validate(verifyEmailSchema),
   authController.verifyEmail
 );
+router.post(
+  '/change-email',
+  protect,
+  emailActionLimiter,
+  validate(changeEmailSchema),
+  authController.changeEmail
+);
+router.post(
+  '/confirm-email-change',
+  emailActionLimiter,
+  validate(confirmEmailChangeSchema),
+  authController.confirmEmailChange
+);
+router.post('/cancel-email-change', protect, authController.cancelEmailChange);
 router.post(
   '/resend-verification',
   protect,

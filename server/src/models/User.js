@@ -201,6 +201,25 @@ const userSchema = new Schema(
       default: null,
       select: false,
     },
+    // A changed email only takes effect once the NEW address is confirmed —
+    // `email` itself is left untouched until then, so the account is never
+    // pointed at an address nobody's proven they control. Same
+    // hash-only-token principle as resetPasswordTokenHash.
+    pendingEmail: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    pendingEmailTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    pendingEmailExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     twoFactorEnabled: {
       type: Boolean,
       default: false,

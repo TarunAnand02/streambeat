@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setCredentials, updateUser } from '../auth/authSlice';
+import { cancelEmailChange, changeEmail } from '../auth/authApi';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/toast/ToastProvider';
 import Avatar from '../../components/ui/Avatar';
@@ -31,6 +32,13 @@ export default function SettingsPage() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
   const [passwordError, setPasswordError] = useState(null);
+
+  const [newEmail, setNewEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailSaved, setEmailSaved] = useState(null);
+  const [emailError, setEmailError] = useState(null);
+  const [emailCancelling, setEmailCancelling] = useState(false);
 
   const [exporting, setExporting] = useState(false);
 
@@ -114,6 +122,36 @@ export default function SettingsPage() {
     } catch {
       dispatch(updateUser({ ...user, notificationPrefs: prevPrefs }));
       showToast('Could not update this setting', { type: 'error' });
+    }
+  }
+
+  async function handleEmailSubmit(e) {
+    e.preventDefault();
+    setEmailError(null);
+    setEmailSaved(null);
+    setEmailSaving(true);
+    try {
+      await changeEmail(newEmail, emailPassword);
+      dispatch(updateUser({ ...user, pendingEmail: newEmail }));
+      setEmailSaved(`Confirmation link sent to ${newEmail}.`);
+      setNewEmail('');
+      setEmailPassword('');
+    } catch (err) {
+      setEmailError(err.response?.data?.message || 'Could not change email');
+    } finally {
+      setEmailSaving(false);
+    }
+  }
+
+  async function handleCancelEmailChange() {
+    setEmailCancelling(true);
+    try {
+      await cancelEmailChange();
+      dispatch(updateUser({ ...user, pendingEmail: null }));
+    } catch {
+      showToast('Could not cancel the pending email change', { type: 'error' });
+    } finally {
+      setEmailCancelling(false);
     }
   }
 
@@ -272,6 +310,59 @@ export default function SettingsPage() {
             password?" on the login page if you'd like to set one.
           </p>
         )}
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionHeading}>Email address</h2>
+        <p className={styles.hint}>Current: {user?.email}</p>
+        {user?.pendingEmail && (
+          <div className={styles.success}>
+            Confirmation sent to {user.pendingEmail} — click the link there to finish the change.{' '}
+            <button
+              type="button"
+              className={styles.linkButton}
+              disabled={emailCancelling}
+              onClick={handleCancelEmailChange}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        <form className={styles.form} onSubmit={handleEmailSubmit}>
+          {emailError && <div className={styles.error}>{emailError}</div>}
+          {emailSaved && <div className={styles.success}>{emailSaved}</div>}
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="newEmail">
+              New email address
+            </label>
+            <input
+              id="newEmail"
+              type="email"
+              className={styles.input}
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              required
+            />
+          </div>
+          {user?.hasPassword && (
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="emailPassword">
+                Current password
+              </label>
+              <PasswordInput
+                id="emailPassword"
+                className={styles.input}
+                autoComplete="current-password"
+                value={emailPassword}
+                onChange={(e) => setEmailPassword(e.target.value)}
+                required
+              />
+            </div>
+          )}
+          <button className={styles.submit} type="submit" disabled={emailSaving}>
+            {emailSaving ? 'Sending…' : 'Change email'}
+          </button>
+        </form>
       </section>
 
       <section className={styles.section}>

@@ -77,3 +77,32 @@ export async function sendVerificationEmail(to, verifyUrl) {
   });
   return true;
 }
+
+// Sent to the NEW address — confirming it is what actually completes the
+// email change (see changeEmail/confirmEmailChange in auth.controller.js).
+export async function sendEmailChangeConfirmation(to, confirmUrl) {
+  if (!isMailerConfigured()) return false;
+
+  await send({
+    to,
+    subject: 'Confirm your new StreamBeat email address',
+    text: `Confirm this address to finish changing your StreamBeat account email (valid for 24 hours): ${confirmUrl}\n\nIf you didn't request this, you can safely ignore this email.`,
+    html: `<p>Confirm this address to finish changing your StreamBeat account email.</p><p><a href="${confirmUrl}">Confirm new email address</a> (valid for 24 hours).</p><p>If you didn't request this, you can safely ignore this email.</p>`,
+  });
+  return true;
+}
+
+// Sent to the OLD address as a heads-up, not an action — lets the real
+// owner notice and secure the account (e.g. change password, sign out all
+// devices) if this change wasn't actually them.
+export async function sendEmailChangeAlert(to, newEmail) {
+  if (!isMailerConfigured()) return false;
+
+  await send({
+    to,
+    subject: 'Your StreamBeat email address is changing',
+    text: `Someone requested to change the email on your StreamBeat account to ${newEmail}. It won't take effect until that address is confirmed.\n\nIf this wasn't you, change your password immediately from Settings.`,
+    html: `<p>Someone requested to change the email on your StreamBeat account to <strong>${newEmail}</strong>. It won't take effect until that address is confirmed.</p><p>If this wasn't you, change your password immediately from Settings.</p>`,
+  });
+  return true;
+}

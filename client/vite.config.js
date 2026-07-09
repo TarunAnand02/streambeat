@@ -36,17 +36,21 @@ export default defineConfig({
         // same device, and a URL-keyed cache would risk showing one
         // account's cached data (history, notifications, etc.) to another
         // account after switching while offline.
+        //
+        // Same-origin only — a plain cross-origin <img> (e.g. YouTube-
+        // imported videos' thumbnails, hotlinked straight to i.ytimg.com)
+        // fetches in 'no-cors' mode, so the response the service worker
+        // sees back is opaque (status 0, unreadable). Caching those and
+        // replaying them later is unreliable in exactly the same "works on
+        // first load, breaks on repeat visits" way the redirected-response
+        // bug did — so cross-origin images are left to the browser's own
+        // normal HTTP cache instead of being run through Workbox at all.
         runtimeCaching: [
           {
-            urlPattern: ({ request }) => request.destination === 'image',
+            urlPattern: ({ request, url }) =>
+              request.destination === 'image' && url.origin === self.location.origin,
             handler: 'CacheFirst',
             options: {
-              // Renamed (was 'streambeat-images') to force every existing
-              // browser onto a fresh cache — the old one may hold cached
-              // *redirected* responses from before thumbnails/avatars were
-              // switched to same-origin proxying, and CacheFirst would keep
-              // serving those broken entries for up to maxAgeSeconds
-              // regardless of this fix, without a rename.
               cacheName: 'streambeat-images-v2',
               expiration: { maxEntries: 300, maxAgeSeconds: 7 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },

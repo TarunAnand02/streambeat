@@ -709,24 +709,6 @@ export default function WatchPage() {
       )}
 
       <div className={styles.resolutionRow}>
-        <button
-          type="button"
-          className={styles.theaterButton}
-          onClick={() => seekTo(Math.max(0, getCurrentTime() - 5))}
-          title="Rewind 5 seconds (←)"
-          aria-label="Rewind 5 seconds"
-        >
-          <SkipBackIcon />
-        </button>
-        <button
-          type="button"
-          className={styles.theaterButton}
-          onClick={() => seekTo(getCurrentTime() + 5)}
-          title="Forward 5 seconds (→)"
-          aria-label="Forward 5 seconds"
-        >
-          <SkipForwardIcon />
-        </button>
         {video.source === 'upload' && video.variants?.length > 0 && (
           <select
             className={styles.resolutionSelect}

@@ -130,6 +130,29 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    // Suspension blocks login/API access entirely (enforced in the auth
+    // middleware) without deleting the account or its data — reversible via
+    // "Activate" in the admin panel.
+    suspended: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    suspendedReason: {
+      type: String,
+      default: null,
+      maxlength: 300,
+    },
+    // Updated on every successful login — powers the admin dashboard's
+    // "active users" metric (logged in within the last N days).
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
     // Only the SHA-256 hash of the reset token is stored — the raw token is
     // emailed to the user and never persisted, so a DB read alone can't be
     // used to reset the account (same principle as passwordHash).

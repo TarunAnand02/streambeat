@@ -95,7 +95,7 @@ export const accessShareLink = asyncHandler(async (req, res) => {
   }
 
   const video = await Video.findById(link.video).populate('uploader', 'username avatarUrl');
-  if (!video) throw new ApiError(404, 'The video behind this link no longer exists');
+  if (!video || video.deletedAt) throw new ApiError(404, 'The video behind this link no longer exists');
 
   const subscriberCount = await Subscription.countDocuments({ channel: video.uploader._id });
 

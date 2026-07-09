@@ -16,6 +16,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { assertCategoryExists } from './category.controller.js';
 import { findOrCreateWatchLater } from './collection.controller.js';
 import { createNotification } from './notification.controller.js';
+import { findOrCreateSiteSettings } from './settings.controller.js';
 import { evaluateAchievements } from '../utils/achievements.js';
 import {
   CAPTION_STORAGE_DIR,
@@ -31,7 +32,7 @@ import {
   isCloudStorageConfigured,
   uploadFileToCloud,
 } from '../utils/storage.js';
-import { transcodeVideo } from '../utils/transcode.js';
+import { generateThumbnail, transcodeVideo } from '../utils/transcode.js';
 import {
   MAX_URL_IMPORT_BYTES,
   fetchAndValidateVideoResponse,
@@ -67,6 +68,38 @@ function hashFile(localPath) {
   });
 }
 
+// Enforces the admin-configurable upload settings (SiteSettings) that
+// multer's own static, boot-time config can't express per-request: a
+// per-user upload count cap, a format whitelist narrower than the app's
+// hard-coded one, and a file-size ceiling tighter than multer's fixed
+// 500MB. Checked here — the one place that creates an 'upload' video from a
+// freshly-written file that needs cleaning up on rejection.
+async function assertUploadQuota(userId, videoFile, thumbnailFile) {
+  const settings = await findOrCreateSiteSettings();
+
+  function reject(status, message) {
+    fs.unlink(videoFile.path, () => {});
+    if (thumbnailFile) fs.unlink(thumbnailFile.path, () => {});
+    throw new ApiError(status, message);
+  }
+
+  if (settings.maxUploadsPerUser) {
+    const count = await Video.countDocuments({ uploader: userId, source: 'upload' });
+    if (count >= settings.maxUploadsPerUser) {
+      reject(403, `You've reached the platform's limit of ${settings.maxUploadsPerUser} uploads per account`);
+    }
+  }
+
+  if (settings.allowedVideoFormats?.length && !settings.allowedVideoFormats.includes(videoFile.mimetype)) {
+    reject(400, 'This video format is not currently accepted');
+  }
+
+  const maxBytes = settings.maxUploadSizeMB * 1024 * 1024;
+  if (videoFile.size > maxBytes) {
+    reject(400, `That file exceeds the ${settings.maxUploadSizeMB}MB size limit`);
+  }
+}
+
 export const createVideo = asyncHandler(async (req, res) => {
   const videoFile = req.files?.video?.[0];
   const thumbnailFile = req.files?.thumbnail?.[0];
@@ -80,6 +113,7 @@ export const createVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Thumbnail exceeds the 5MB size limit');
   }
 
+  await assertUploadQuota(req.userId, videoFile, thumbnailFile);
   await assertCategoryExists(req.body.category);
 
   const fileHash = await hashFile(videoFile.path).catch(() => null);
@@ -106,6 +140,7 @@ export const createVideo = asyncHandler(async (req, res) => {
 
   res.status(201).json({ video });
   transcodeVideo(video._id).catch(() => {});
+  if (!thumbnailFile) generateThumbnail(video._id).catch(() => {});
   evaluateAchievements(req.userId).catch(() => {});
 });
 
@@ -157,6 +192,7 @@ export const importFromUrl = asyncHandler(async (req, res) => {
 
   res.status(201).json({ video });
   transcodeVideo(video._id).catch(() => {});
+  generateThumbnail(video._id).catch(() => {});
   evaluateAchievements(req.userId).catch(() => {});
 });
 
@@ -167,7 +203,7 @@ function buildVideoFilter(query) {
   // videos — even for their own uploader, matching how unlisted/private
   // videos work on real platforms (reachable only via direct link, or via
   // the owner's own channel page).
-  const filter = { visibility: 'public' };
+  const filter = { visibility: 'public', deletedAt: null };
   if (query.category) filter.category = query.category;
   if (query.tags?.length) filter.tags = { $all: query.tags };
   if (query.collectionId) filter.collections = query.collectionId;
@@ -204,6 +240,11 @@ export function assertViewable(video, userId) {
     ? video.uploader._id.toString() === userId
     : video.uploader.toString() === userId;
   if (video.visibility === 'private' && !isOwner) {
+    throw new ApiError(404, 'Video not found');
+  }
+  // Admin soft-delete hides a video from everyone, including its own
+  // uploader, until an admin restores it.
+  if (video.deletedAt) {
     throw new ApiError(404, 'Video not found');
   }
 }
@@ -322,6 +363,9 @@ export const streamVideo = asyncHandler(async (req, res) => {
   if (video.source !== 'upload') {
     throw new ApiError(400, 'This video is hosted on YouTube, not streamed locally');
   }
+  if (video.deletedAt) {
+    throw new ApiError(404, 'Video not found');
+  }
 
   // Resolve which file to serve: either the original or a ready transcoded
   // variant, each of which independently tracks its own storage provider.
@@ -398,7 +442,7 @@ export const streamVideo = asyncHandler(async (req, res) => {
 
 export const getThumbnail = asyncHandler(async (req, res) => {
   const video = await Video.findById(req.params.id);
-  if (!video || !video.thumbnailFilename) {
+  if (!video || !video.thumbnailFilename || video.deletedAt) {
     throw new ApiError(404, 'Thumbnail not found');
   }
   // See streamVideo — no visibility check here; <img> can't send an auth
@@ -418,7 +462,7 @@ export const getThumbnail = asyncHandler(async (req, res) => {
 
 export const getCaption = asyncHandler(async (req, res) => {
   const video = await Video.findById(req.params.id);
-  if (!video || !video.captionFilename) {
+  if (!video || !video.captionFilename || video.deletedAt) {
     throw new ApiError(404, 'Caption not found');
   }
   // See streamVideo — no visibility check here; <track> can't send an auth
@@ -456,6 +500,7 @@ export const updateVideo = asyncHandler(async (req, res) => {
   if (req.body.visibility !== undefined) video.visibility = req.body.visibility;
   if (req.body.archived !== undefined) video.archived = req.body.archived;
 
+  let newlyAddedCollectionIds = [];
   if (req.body.collections !== undefined) {
     // Allow collections you own outright, or ones you've been granted
     // editor access to as a collaborator — viewers can't add videos.
@@ -469,12 +514,40 @@ export const updateVideo = asyncHandler(async (req, res) => {
     if (accessible !== req.body.collections.length) {
       throw new ApiError(403, 'One or more collections are not accessible to you');
     }
+    const previousIds = new Set(video.collections.map(String));
+    newlyAddedCollectionIds = req.body.collections.filter((id) => !previousIds.has(String(id)));
     video.collections = req.body.collections;
   }
 
   await video.save();
 
   res.json({ video });
+
+  // Only collaborative collections have anyone else to tell — solo ones
+  // just notify the actor themselves, which createNotification already
+  // skips for non-self-notify types.
+  if (newlyAddedCollectionIds.length > 0) {
+    Collection.find({ _id: { $in: newlyAddedCollectionIds } })
+      .select('name owner collaborators')
+      .then((collections) => {
+        for (const collection of collections) {
+          const recipients = new Set([
+            collection.owner.toString(),
+            ...collection.collaborators.map((c) => c.user.toString()),
+          ]);
+          for (const recipientId of recipients) {
+            createNotification({
+              recipient: recipientId,
+              type: 'collection_add',
+              actor: req.userId,
+              video: video._id,
+              meta: collection.name,
+            });
+          }
+        }
+      })
+      .catch(() => {});
+  }
 });
 
 // Replaces (or adds, if it was skipped at upload time) the thumbnail on an
@@ -555,7 +628,7 @@ export const updateCaption = asyncHandler(async (req, res) => {
 
 // Removes the original file, thumbnail, caption, and any transcoded variants
 // for an 'upload'-sourced video, from whichever storage each lives in.
-function deleteVideoFiles(video) {
+export function deleteVideoFiles(video) {
   if (video.source !== 'upload') return;
 
   if (video.storageProvider === 'r2') {
@@ -740,7 +813,7 @@ export const searchVideos = asyncHandler(async (req, res) => {
 export const suggestVideos = asyncHandler(async (req, res) => {
   const { q } = req.query;
   const videos = await Video.find(
-    { $text: { $search: q }, visibility: 'public' },
+    { $text: { $search: q }, visibility: 'public', deletedAt: null },
     { score: { $meta: 'textScore' }, title: 1, source: 1, thumbnailFilename: 1, youtubeThumbnailUrl: 1 }
   )
     .sort({ score: { $meta: 'textScore' } })
@@ -768,7 +841,7 @@ export const getTrending = asyncHandler(async (req, res) => {
   ]);
 
   const orderedIds = ranked.map((r) => r._id);
-  const videos = await Video.find({ _id: { $in: orderedIds }, visibility: 'public' })
+  const videos = await Video.find({ _id: { $in: orderedIds }, visibility: 'public', deletedAt: null })
     .populate('uploader', 'username avatarUrl')
     .lean();
 
@@ -790,7 +863,7 @@ const RECOMMENDATION_CANDIDATE_POOL = 300;
 // for logged-out viewers or anyone without enough history yet.
 export const getRecommended = asyncHandler(async (req, res) => {
   if (!req.userId) {
-    const trending = await Video.find({ visibility: 'public' })
+    const trending = await Video.find({ visibility: 'public', deletedAt: null })
       .sort({ views: -1 })
       .limit(RECOMMENDATION_LIMIT)
       .populate('uploader', 'username avatarUrl')
@@ -818,6 +891,7 @@ export const getRecommended = asyncHandler(async (req, res) => {
       uploader: { $nin: excludedUploaders },
       _id: { $nin: excludedVideos },
       visibility: 'public',
+      deletedAt: null,
     })
       .sort({ views: -1 })
       .limit(RECOMMENDATION_LIMIT)
@@ -840,6 +914,7 @@ export const getRecommended = asyncHandler(async (req, res) => {
     _id: { $nin: [...watchedIds, ...excludedVideos] },
     uploader: { $nin: excludedUploaders },
     visibility: 'public',
+    deletedAt: null,
   })
     .sort({ createdAt: -1 })
     .limit(RECOMMENDATION_CANDIDATE_POOL)

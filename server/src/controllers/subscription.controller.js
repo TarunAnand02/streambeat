@@ -56,7 +56,7 @@ export const getFeed = asyncHandler(async (req, res) => {
     return res.json({ videos: [], page, hasMore: false });
   }
 
-  const videos = await Video.find({ uploader: { $in: channelIds }, visibility: 'public' })
+  const videos = await Video.find({ uploader: { $in: channelIds }, visibility: 'public', deletedAt: null })
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit + 1)

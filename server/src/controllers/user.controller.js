@@ -55,6 +55,9 @@ export const getChannel = asyncHandler(async (req, res) => {
   // Only the owner sees their own unlisted/private videos on their channel
   // page — everyone else sees the same public-only view real platforms show.
   const videoFilter = isOwner ? { uploader: user._id } : { uploader: user._id, visibility: 'public' };
+  // Admin soft-delete hides a video from the channel page too, even for its
+  // own uploader, until an admin restores it.
+  videoFilter.deletedAt = null;
   // Archiving only declutters the owner's own channel management view — an
   // archived-but-public video is still fully visible to everyone else, the
   // same way Gmail's Archive just leaves your own Inbox.

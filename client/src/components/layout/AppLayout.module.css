@@ -28,7 +28,13 @@
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (min-width: 641px) and (max-width: 1024px) {
+  .content {
+    padding: 20px 24px;
+  }
+}
+
+@media (max-width: 640px) {
   .content {
     padding: 16px;
   }

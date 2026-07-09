@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import achievementRoutes from './routes/achievement.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import categoryRoutes from './routes/category.routes.js';
@@ -20,6 +21,7 @@ import helpRoutes from './routes/help.routes.js';
 import historyRoutes from './routes/history.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
 import shareLinkRoutes from './routes/shareLink.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import userRoutes from './routes/user.routes.js';
@@ -129,6 +131,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/help', helpRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/focus-sessions', focusSessionRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/share-links', shareLinkRoutes);
@@ -152,7 +156,7 @@ if (env.isProd && fs.existsSync(clientDistPath)) {
   app.get('/watch/:id', async (req, res, next) => {
     if (!isCrawlerUserAgent(req.headers['user-agent'])) return next();
     try {
-      const video = await Video.findOne({ _id: req.params.id, visibility: 'public' }).lean();
+      const video = await Video.findOne({ _id: req.params.id, visibility: 'public', deletedAt: null }).lean();
       if (!video) return next();
 
       const imageUrl =

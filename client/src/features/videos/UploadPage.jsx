@@ -1,12 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import CategorySelect from './CategorySelect';
+import { formatBytes } from '../../lib/formatDuration';
 import { uploadVideo } from './videosApi';
 import styles from './UploadPage.module.css';
 
 const MAX_VIDEO_MB = 500;
 
 let nextQueueId = 0;
+
+function formatEta(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return null;
+  if (seconds < 60) return `${Math.ceil(seconds)}s left`;
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${minutes}m ${secs}s left`;
+}
 
 // Reads a local video file's duration without uploading it, by loading it
 // into an off-DOM <video> element and waiting for its metadata to parse.
@@ -33,16 +42,19 @@ function titleFromFilename(name) {
 
 // 'pending': added to the queue, not yet started — title/category/thumbnail
 // are still editable here. 'queued': user pressed start, waiting its turn.
+// 'paused' is distinct from 'canceled' — it's resumable (requeues the same
+// item), while canceled is a deliberate give-up.
 const STATUS_LABELS = {
   pending: 'Ready to upload',
   queued: 'Waiting…',
   uploading: 'Uploading…',
+  paused: 'Paused',
   done: 'Uploaded',
   error: 'Failed',
   canceled: 'Canceled',
 };
 
-const EDITABLE_STATUSES = new Set(['pending', 'queued']);
+const EDITABLE_STATUSES = new Set(['pending', 'queued', 'paused']);
 
 export default function UploadPage() {
   const [items, setItems] = useState([]);
@@ -50,6 +62,10 @@ export default function UploadPage() {
   const dragCounter = useRef(0);
   const itemsRef = useRef(items);
   itemsRef.current = items;
+  // Distinguishes an abort triggered by "Pause" from one triggered by
+  // "Cancel" — both go through the same AbortController, so the catch
+  // block below checks this set to pick the right resulting status.
+  const pausedIdsRef = useRef(new Set());
 
   const updateItem = useCallback((id, patch) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -58,7 +74,15 @@ export default function UploadPage() {
   const runItem = useCallback(
     async (item) => {
       const controller = new AbortController();
-      updateItem(item.id, { status: 'uploading', progress: 0, error: null, controller });
+      const startTime = Date.now();
+      updateItem(item.id, {
+        status: 'uploading',
+        progress: 0,
+        error: null,
+        controller,
+        speedBps: null,
+        etaSeconds: null,
+      });
       try {
         const video = await uploadVideo(
           {
@@ -70,18 +94,42 @@ export default function UploadPage() {
             videoFile: item.file,
             thumbnailFile: item.thumbnailFile,
           },
-          (evt) => updateItem(item.id, { progress: Math.round((evt.loaded / evt.total) * 100) }),
+          (evt) => {
+            const elapsedSeconds = (Date.now() - startTime) / 1000;
+            const speedBps = elapsedSeconds > 0.5 ? evt.loaded / elapsedSeconds : null;
+            const remainingBytes = evt.total - evt.loaded;
+            updateItem(item.id, {
+              progress: Math.round((evt.loaded / evt.total) * 100),
+              speedBps,
+              etaSeconds: speedBps ? remainingBytes / speedBps : null,
+            });
+          },
           controller.signal
         );
-        updateItem(item.id, { status: 'done', progress: 100, videoId: video._id, controller: null });
+        updateItem(item.id, {
+          status: 'done',
+          progress: 100,
+          videoId: video._id,
+          controller: null,
+          speedBps: null,
+          etaSeconds: null,
+        });
       } catch (err) {
         if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') {
-          updateItem(item.id, { status: 'canceled', controller: null });
+          const wasPaused = pausedIdsRef.current.delete(item.id);
+          updateItem(item.id, {
+            status: wasPaused ? 'paused' : 'canceled',
+            controller: null,
+            speedBps: null,
+            etaSeconds: null,
+          });
         } else {
           updateItem(item.id, {
             status: 'error',
             error: err.response?.data?.message || 'Upload failed',
             controller: null,
+            speedBps: null,
+            etaSeconds: null,
           });
         }
       }
@@ -191,6 +239,19 @@ export default function UploadPage() {
 
   function handleCancel(id) {
     itemsRef.current.find((it) => it.id === id)?.controller?.abort();
+  }
+
+  // There's no chunked-upload protocol here, so "resume" can't continue
+  // from the exact byte it left off at — pausing aborts the in-flight
+  // request (freeing bandwidth now) and resuming requeues the same file,
+  // which restarts its upload from 0%.
+  function handlePause(id) {
+    pausedIdsRef.current.add(id);
+    itemsRef.current.find((it) => it.id === id)?.controller?.abort();
+  }
+
+  function handleResume(id) {
+    updateItem(id, { status: 'queued', progress: 0, error: null });
   }
 
   function handleRetry(id) {
@@ -325,6 +386,13 @@ export default function UploadPage() {
                     </div>
                   )}
 
+                  {item.status === 'uploading' && (item.speedBps || item.etaSeconds) && (
+                    <div className={styles.progressMeta}>
+                      {item.speedBps && <span>{formatBytes(item.speedBps)}/s</span>}
+                      {item.etaSeconds !== null && <span>{formatEta(item.etaSeconds)}</span>}
+                    </div>
+                  )}
+
                   {item.status === 'error' && <div className={styles.error}>{item.error}</div>}
 
                   <div className={styles.queueActions}>
@@ -334,8 +402,22 @@ export default function UploadPage() {
                       </button>
                     )}
                     {item.status === 'uploading' && (
-                      <button type="button" className={styles.queueButton} onClick={() => handleCancel(item.id)}>
-                        Cancel
+                      <>
+                        <button
+                          type="button"
+                          className={styles.queueButton}
+                          onClick={() => handlePause(item.id)}
+                        >
+                          Pause
+                        </button>
+                        <button type="button" className={styles.queueButtonGhost} onClick={() => handleCancel(item.id)}>
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                    {item.status === 'paused' && (
+                      <button type="button" className={styles.queueButton} onClick={() => handleResume(item.id)}>
+                        Resume
                       </button>
                     )}
                     {(item.status === 'error' || item.status === 'canceled') && (

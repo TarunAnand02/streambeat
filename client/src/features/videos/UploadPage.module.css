@@ -135,6 +135,14 @@
   color: var(--color-text);
 }
 
+.progressMeta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-subtle);
+}
+
 .submit {
   padding: 12px;
   border-radius: var(--radius-full);
@@ -244,6 +252,10 @@
 
 .status_uploading {
   color: var(--color-accent);
+}
+
+.status_paused {
+  color: #f59e0b;
 }
 
 .status_done {

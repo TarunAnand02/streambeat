@@ -58,6 +58,19 @@ export function describe(n) {
           🏆 Achievement unlocked: <strong>{n.meta}</strong>
         </>
       );
+    case 'transcode_complete':
+      return (
+        <>
+          <strong>{n.video?.title}</strong> finished processing — more quality options are ready
+        </>
+      );
+    case 'collection_add':
+      return (
+        <>
+          <strong>{n.actor?.username}</strong> added <strong>{n.video?.title}</strong> to{' '}
+          <strong>{n.meta}</strong>
+        </>
+      );
     default:
       return 'New notification';
   }

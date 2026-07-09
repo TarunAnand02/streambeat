@@ -22,7 +22,7 @@ export const getRobotsTxt = (req, res) => {
 const STATIC_PAGES = ['', 'help'];
 
 export const getSitemap = asyncHandler(async (req, res) => {
-  const videos = await Video.find({ visibility: 'public' })
+  const videos = await Video.find({ visibility: 'public', deletedAt: null })
     .select('_id updatedAt')
     .sort({ updatedAt: -1 })
     .limit(5000) // sitemap-index territory beyond this; fine at current scale

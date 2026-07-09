@@ -40,7 +40,7 @@ export async function findOrCreateWatchLater(userId) {
 
 export const getWatchLater = asyncHandler(async (req, res) => {
   const collection = await findOrCreateWatchLater(req.userId);
-  const videos = await Video.find({ collections: collection._id })
+  const videos = await Video.find({ collections: collection._id, deletedAt: null })
     .sort({ createdAt: -1 })
     .populate('uploader', 'username avatarUrl');
   res.json({ collection, videos, role: 'owner' });
@@ -120,8 +120,8 @@ export const getCollection = asyncHandler(async (req, res) => {
   // someone who isn't its owner — same rule a channel page's video grid
   // already follows for non-owners.
   const videoFilter = isPublicView
-    ? { collections: collection._id, visibility: 'public' }
-    : { collections: collection._id };
+    ? { collections: collection._id, visibility: 'public', deletedAt: null }
+    : { collections: collection._id, deletedAt: null };
   const videos = await Video.find(videoFilter)
     .sort({ createdAt: -1 })
     .populate('uploader', 'username avatarUrl');

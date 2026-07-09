@@ -454,3 +454,62 @@ export function BarChartSmallIcon(props) {
     </svg>
   );
 }
+
+export function WrenchIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M14.7 6.3a4 4 0 0 0-5.4 4.6L3 17.2V21h3.8l6.3-6.3a4 4 0 0 0 4.6-5.4l-2.8 2.8-2.1-2.1 2.8-2.8Z" />
+    </svg>
+  );
+}
+
+export function UsersIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
+      <path d="M16 8.2a3.2 3.2 0 0 1 0 6.1" />
+      <path d="M18.5 14.6c2.3.6 3.5 2.4 3.5 5.4" />
+    </svg>
+  );
+}
+
+export function GaugeIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 15a8 8 0 1 1 16 0" />
+      <path d="M12 15 15.5 9.5" />
+      <path d="M4 15h1.5M18.5 15H20M6.5 8.5l1 1M17.5 8.5l-1 1" />
+    </svg>
+  );
+}
+
+export function QueueIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="4" y="5" width="16" height="4" rx="1" />
+      <rect x="4" y="11" width="16" height="4" rx="1" opacity="0.6" />
+      <rect x="4" y="17" width="16" height="4" rx="1" opacity="0.3" />
+    </svg>
+  );
+}
+
+export function DatabaseIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <ellipse cx="12" cy="5.5" rx="8" ry="3" />
+      <path d="M4 5.5V18c0 1.7 3.6 3 8 3s8-1.3 8-3V5.5" />
+      <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+    </svg>
+  );
+}
+
+export function ClipboardIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="6" y="4" width="12" height="17" rx="2" />
+      <rect x="9" y="2.5" width="6" height="3" rx="1" />
+      <path d="M9 11h6M9 15h6" />
+    </svg>
+  );
+}

@@ -7,14 +7,17 @@ const PAGE_LIMIT = 30;
 // video — comments/replies/achievements each carry unique content, so
 // merging them would hide information rather than reduce clutter.
 const GROUPABLE_TYPES = new Set(['like', 'subscribe']);
+// Self-triggered types — the "actor" is the same person as the recipient by
+// design (you unlocked an achievement, your own upload finished processing),
+// so the usual "never notify yourself" guard only applies to social types.
+const SELF_NOTIFY_TYPES = new Set(['achievement', 'transcode_complete']);
 
 // Fire-and-forget helper used by the routes that actually trigger a
-// notification (subscribe, comment, like, achievement) — never awaited from
-// a hot path, and a failure here should never break the action that caused it.
+// notification (subscribe, comment, like, achievement, etc.) — never
+// awaited from a hot path, and a failure here should never break the
+// action that caused it.
 export async function createNotification({ recipient, type, actor, video, meta }) {
-  // Achievements are inherently self-triggered (you unlocked it), so the
-  // usual "never notify yourself" guard only applies to social types.
-  if (type !== 'achievement' && recipient.toString() === actor.toString()) return;
+  if (!SELF_NOTIFY_TYPES.has(type) && recipient.toString() === actor.toString()) return;
   try {
     await Notification.create({ recipient, type, actor, video, meta: meta ?? null });
   } catch {

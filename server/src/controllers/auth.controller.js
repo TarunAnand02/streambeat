@@ -39,6 +39,10 @@ function hashResetToken(rawToken) {
 // the refresh cookie. Shared by every place that establishes a session
 // (login, 2FA verify, change-password).
 export async function issueSession(req, res, user) {
+  if (user.suspended) {
+    throw new ApiError(403, 'This account has been suspended');
+  }
+
   const jti = crypto.randomUUID();
   const accessToken = signAccessToken(user._id.toString());
   const refreshToken = signRefreshToken(user._id.toString(), user.refreshTokenVersion, jti);
@@ -49,6 +53,7 @@ export async function issueSession(req, res, user) {
     userAgent: req.headers['user-agent'] || '',
     ip: req.ip || '',
   });
+  User.updateOne({ _id: user._id }, { lastLoginAt: new Date() }).catch(() => {});
 
   res.cookie(refreshCookieName(user._id), refreshToken, refreshCookieOptions);
   return accessToken;
@@ -310,6 +315,9 @@ export const refresh = asyncHandler(async (req, res) => {
   const user = await User.findById(payload.sub).select('+passwordHash');
   if (!user || user.refreshTokenVersion !== payload.ver) {
     throw new ApiError(401, 'Refresh token has been revoked');
+  }
+  if (user.suspended) {
+    throw new ApiError(403, 'This account has been suspended');
   }
 
   // The session must still exist (not individually revoked from Settings).

@@ -10,10 +10,10 @@ import {
   ChartIcon,
   ClockIcon,
   CloseIcon,
-  FlagIcon,
   FlameIcon,
   FocusIcon,
   FolderIcon,
+  GaugeIcon,
   HelpIcon,
   HomeIcon,
   ImportIcon,
@@ -174,15 +174,15 @@ export default function Sidebar({ isOpen, onClose }) {
           </button>
           {user.isAdmin && (
             <NavLink
-              to="/admin/reports"
+              to="/admin"
               className={({ isActive }) =>
                 isActive ? `${styles.navItem} ${styles.active}` : styles.navItem
               }
             >
               <span className={styles.icon}>
-                <FlagIcon />
+                <GaugeIcon />
               </span>
-              Reports
+              Admin
             </NavLink>
           )}
         </div>

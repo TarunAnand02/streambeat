@@ -42,6 +42,57 @@
   overflow: hidden;
   background: #000;
   margin-bottom: 16px;
+  /* Stops double-tap-to-zoom on Android from firing alongside our own
+     double-tap-to-seek gesture — a single tap still works normally since
+     "manipulation" only removes double-tap-zoom and the ~300ms tap delay. */
+  touch-action: manipulation;
+}
+
+.gestureFlash {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 72px;
+  height: 72px;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  animation: gestureFlashFade 0.5s ease-out both;
+}
+
+.gestureFlash svg {
+  font-size: 22px;
+}
+
+.gestureFlash[data-side='back'] {
+  left: 12%;
+}
+
+.gestureFlash[data-side='forward'] {
+  right: 12%;
+}
+
+@keyframes gestureFlashFade {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scale(1);
+  }
 }
 
 .audioOnlyOverlay {

@@ -76,10 +76,14 @@ export default function WatchPage() {
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [miniPlayerDismissed, setMiniPlayerDismissed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [gestureFlash, setGestureFlash] = useState(null);
   const videoRef = useRef(null);
   const youtubeRef = useRef(null);
   const wrapperRef = useRef(null);
   const resumeTimeRef = useRef(0);
+  const touchStartRef = useRef(null);
+  const lastTapRef = useRef({ time: 0, x: 0 });
+  const gestureFlashTimeoutRef = useRef(null);
   // Mirrors of the corresponding state, read by the periodic progress
   // report below — kept as refs so that effect doesn't need to tear down
   // and rebuild its interval every time the user changes speed/resolution.
@@ -402,6 +406,62 @@ export default function WatchPage() {
     wrapperRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  // Touch gestures on the player itself: a fast mostly-horizontal swipe
+  // moves to the next/previous playlist video (only when a playlist is
+  // active); otherwise two quick taps close together in the same spot seek
+  // ±10s, split left/right half of the frame — matches YouTube's own mobile
+  // gesture. Neither calls preventDefault, so a normal single tap still
+  // reaches the native player controls underneath untouched.
+  function handleVideoTouchStart(e) {
+    const touch = e.touches[0];
+    if (!touch) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+      // Native player controls (the seek bar especially) live in roughly
+      // the bottom fifth of the frame — a touch starting there is someone
+      // scrubbing, not swiping to the next video, even though a fast drag
+      // across the seek bar would otherwise look just like a swipe.
+      inControlsZone: touch.clientY - rect.top > rect.height * 0.8,
+    };
+  }
+
+  function handleVideoTouchEnd(e) {
+    const touch = e.changedTouches[0];
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!touch || !start) return;
+
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const dt = Date.now() - start.time;
+
+    const isSwipe =
+      !start.inControlsZone && Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 2 && dt < 500;
+    if (isSwipe && playlist) {
+      if (dx < 0 && nextInPlaylist) goToPlaylistVideo(nextInPlaylist);
+      else if (dx > 0 && prevInPlaylist) goToPlaylistVideo(prevInPlaylist);
+      return;
+    }
+
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) return; // moved too much to be a tap
+
+    const now = Date.now();
+    const last = lastTapRef.current;
+    const isDoubleTap = now - last.time < 300 && Math.abs(touch.clientX - last.x) < 40;
+    lastTapRef.current = { time: now, x: touch.clientX };
+    if (!isDoubleTap || !video) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isLeftHalf = touch.clientX - rect.left < rect.width / 2;
+    seekTo(Math.max(0, getCurrentTime() + (isLeftHalf ? -10 : 10)));
+    setGestureFlash(isLeftHalf ? 'back' : 'forward');
+    clearTimeout(gestureFlashTimeoutRef.current);
+    gestureFlashTimeoutRef.current = setTimeout(() => setGestureFlash(null), 500);
+  }
+
   // Keyboard shortcuts: ignore while typing in an input/textarea/editable
   // element so they don't hijack normal text entry (e.g. the notes box).
   useEffect(() => {
@@ -526,7 +586,12 @@ export default function WatchPage() {
       <div className={playlist ? `${styles.layout} ${styles.layoutWithPlaylist}` : styles.layout}>
       <div className={styles.mainColumn}>
       {video.source === 'youtube' ? (
-        <div className={styles.embedWrapper} ref={wrapperRef}>
+        <div
+          className={styles.embedWrapper}
+          ref={wrapperRef}
+          onTouchStart={handleVideoTouchStart}
+          onTouchEnd={handleVideoTouchEnd}
+        >
           <YoutubeEmbed
             ref={youtubeRef}
             videoId={video.youtubeVideoId}
@@ -539,9 +604,20 @@ export default function WatchPage() {
               }
             }}
           />
+          {gestureFlash && (
+            <div className={styles.gestureFlash} data-side={gestureFlash}>
+              {gestureFlash === 'back' ? <SkipBackIcon /> : <SkipForwardIcon />}
+              <span>10s</span>
+            </div>
+          )}
         </div>
       ) : (
-        <div className={styles.embedWrapper} ref={wrapperRef}>
+        <div
+          className={styles.embedWrapper}
+          ref={wrapperRef}
+          onTouchStart={handleVideoTouchStart}
+          onTouchEnd={handleVideoTouchEnd}
+        >
           {/* key forces a fresh <video> per video id + resolution, so
               switching either never reuses a stale element */}
           <video
@@ -574,6 +650,12 @@ export default function WatchPage() {
               )}
               <AudioIcon className={styles.audioOnlyIcon} />
               <div className={styles.audioOnlyTitle}>{video.title}</div>
+            </div>
+          )}
+          {gestureFlash && (
+            <div className={styles.gestureFlash} data-side={gestureFlash}>
+              {gestureFlash === 'back' ? <SkipBackIcon /> : <SkipForwardIcon />}
+              <span>10s</span>
             </div>
           )}
         </div>

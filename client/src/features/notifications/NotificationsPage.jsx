@@ -20,6 +20,8 @@ const CATEGORIES = [
   { value: 'reply', label: 'Replies' },
   { value: 'subscribe', label: 'Subscriptions' },
   { value: 'achievement', label: 'Achievements' },
+  { value: 'transcode_complete', label: 'Processing' },
+  { value: 'collection_add', label: 'Collections' },
 ];
 
 export default function NotificationsPage() {

@@ -11,13 +11,24 @@ export const protect = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, 'Not authenticated');
   }
 
+  let userId;
   try {
     const payload = verifyAccessToken(token);
-    req.userId = payload.sub;
-    next();
+    userId = payload.sub;
   } catch {
     throw new ApiError(401, 'Invalid or expired access token');
   }
+
+  // Checked on every request (not just at login) so a suspension takes
+  // effect immediately against an already-issued access token, not just on
+  // the suspended user's next login attempt.
+  const user = await User.findById(userId).select('suspended');
+  if (user?.suspended) {
+    throw new ApiError(403, 'This account has been suspended');
+  }
+
+  req.userId = userId;
+  next();
 });
 
 // Must run after `protect` (needs req.userId already set).

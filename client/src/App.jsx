@@ -1,10 +1,12 @@
-import { lazy, Suspense, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Route, Routes } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
+import MaintenancePage from './components/MaintenancePage';
 import NotFoundPage from './components/NotFoundPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Spinner from './components/ui/Spinner';
+import { fetchPublicSettings } from './features/admin/adminSettingsApi';
 import { restoreSession } from './features/auth/authSlice';
 
 // Route-level code splitting: each page becomes its own chunk, fetched only
@@ -30,6 +32,15 @@ const HomePage = lazy(() => import('./features/videos/HomePage'));
 const ImportPage = lazy(() => import('./features/videos/ImportPage'));
 const NotificationsPage = lazy(() => import('./features/notifications/NotificationsPage'));
 const AdminReportsPage = lazy(() => import('./features/reports/AdminReportsPage'));
+const AdminLayout = lazy(() => import('./features/admin/AdminLayout'));
+const AdminDashboardPage = lazy(() => import('./features/admin/AdminDashboardPage'));
+const AdminUsersPage = lazy(() => import('./features/admin/AdminUsersPage'));
+const AdminVideosPage = lazy(() => import('./features/admin/AdminVideosPage'));
+const AdminUploadMonitorPage = lazy(() => import('./features/admin/AdminUploadMonitorPage'));
+const AdminStoragePage = lazy(() => import('./features/admin/AdminStoragePage'));
+const AdminAnalyticsPage = lazy(() => import('./features/admin/AdminAnalyticsPage'));
+const AdminSettingsPage = lazy(() => import('./features/admin/AdminSettingsPage'));
+const AdminActivityLogsPage = lazy(() => import('./features/admin/AdminActivityLogsPage'));
 const SearchResultsPage = lazy(() => import('./features/videos/SearchResultsPage'));
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
 const SharedVideoPage = lazy(() => import('./features/share/SharedVideoPage'));
@@ -38,10 +49,28 @@ const WatchPage = lazy(() => import('./features/videos/WatchPage'));
 
 export default function App() {
   const dispatch = useDispatch();
+  const { user, initialized } = useSelector((state) => state.auth);
+  const [siteSettings, setSiteSettings] = useState(null);
 
   useEffect(() => {
     dispatch(restoreSession());
+    // Best-effort — if this fails (e.g. server briefly unreachable), the app
+    // just proceeds as if maintenance mode is off rather than getting stuck.
+    fetchPublicSettings()
+      .then(setSiteSettings)
+      .catch(() => setSiteSettings({ maintenanceMode: false }));
   }, [dispatch]);
+
+  // Only the (rare) maintenance-mode-on case needs to wait for auth to
+  // settle before deciding what to render — the common case (maintenance
+  // off, or the settings fetch hasn't resolved yet) renders immediately,
+  // same as before this existed, rather than delaying every page load.
+  if (siteSettings?.maintenanceMode) {
+    if (!initialized) return <Spinner />;
+    // Admins can still use the app during maintenance so they can turn it
+    // back off; everyone else sees a static page instead of any route.
+    if (!user?.isAdmin) return <MaintenancePage siteName={siteSettings.siteName} />;
+  }
 
   return (
     <Suspense fallback={<Spinner />}>
@@ -73,7 +102,17 @@ export default function App() {
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/subscriptions" element={<SubscriptionsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/admin/reports" element={<AdminReportsPage />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboardPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="videos" element={<AdminVideosPage />} />
+              <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="uploads" element={<AdminUploadMonitorPage />} />
+              <Route path="storage" element={<AdminStoragePage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="activity" element={<AdminActivityLogsPage />} />
+            </Route>
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

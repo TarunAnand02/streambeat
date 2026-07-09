@@ -150,6 +150,16 @@ const videoSchema = new Schema(
       default: false,
       index: true,
     },
+    // Admin soft-delete — distinct from a regular owner-initiated delete
+    // (which removes the record and its files outright). A soft-deleted
+    // video is hidden from every normal query (feeds, search, the owner's
+    // own channel, direct access) but its files stay put so "Restore" in
+    // the admin panel can bring it back.
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true }
 );

@@ -41,7 +41,13 @@ export default defineConfig({
             urlPattern: ({ request }) => request.destination === 'image',
             handler: 'CacheFirst',
             options: {
-              cacheName: 'streambeat-images',
+              // Renamed (was 'streambeat-images') to force every existing
+              // browser onto a fresh cache — the old one may hold cached
+              // *redirected* responses from before thumbnails/avatars were
+              // switched to same-origin proxying, and CacheFirst would keep
+              // serving those broken entries for up to maxAgeSeconds
+              // regardless of this fix, without a rename.
+              cacheName: 'streambeat-images-v2',
               expiration: { maxEntries: 300, maxAgeSeconds: 7 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
             },

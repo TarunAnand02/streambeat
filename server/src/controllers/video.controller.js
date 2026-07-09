@@ -449,8 +449,17 @@ export const getThumbnail = asyncHandler(async (req, res) => {
   // header either, and the metadata endpoint already gates discovery.
 
   if (video.storageProvider === 'r2') {
-    const url = await getSignedFileUrl(video.thumbnailFilename);
-    return res.redirect(302, url);
+    // Proxied (not redirected) — a redirect to a cross-origin signed URL
+    // interacts badly with the PWA's service worker: Workbox's CacheFirst
+    // image strategy caches the *followed* response (redirected: true,
+    // final Supabase/R2 URL), and replaying that cached response on a later
+    // load reliably fails instead of rendering the image, forcing a hard
+    // refresh to bypass the service worker and get a fresh, unredirected
+    // response. Proxying keeps this same-origin so there's no redirect to
+    // ever get cached in the first place. Same reasoning as getCaption.
+    res.type(path.extname(video.thumbnailFilename));
+    const stream = await getFileStream(video.thumbnailFilename);
+    return pipeline(stream, res).catch(() => {});
   }
 
   const filePath = path.join(THUMBNAIL_STORAGE_DIR, video.thumbnailFilename);

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { pipeline } from 'stream/promises';
 import { Collection } from '../models/Collection.js';
 import { Comment } from '../models/Comment.js';
 import { Subscription } from '../models/Subscription.js';
@@ -11,7 +12,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { toPublicUser } from './auth.controller.js';
 import { persistUploadedFile } from './video.controller.js';
 import { AVATAR_STORAGE_DIR, assertAvatarSize } from '../middleware/upload.middleware.js';
-import { deleteFileFromCloud, getSignedFileUrl } from '../utils/storage.js';
+import { deleteFileFromCloud, getFileStream } from '../utils/storage.js';
 
 const ACTIVITY_LIMIT = 15;
 
@@ -223,8 +224,11 @@ export const getAvatar = asyncHandler(async (req, res) => {
   }
 
   if (user.avatarStorageProvider === 'r2') {
-    const url = await getSignedFileUrl(user.avatarFilename);
-    return res.redirect(302, url);
+    // Proxied (not redirected) — see getThumbnail's comment for why a
+    // cross-origin redirect here breaks the PWA's image caching.
+    res.type(path.extname(user.avatarFilename));
+    const stream = await getFileStream(user.avatarFilename);
+    return pipeline(stream, res).catch(() => {});
   }
 
   const filePath = path.join(AVATAR_STORAGE_DIR, user.avatarFilename);
